@@ -5,17 +5,6 @@ p.ilStartupSection, .ilContentFixed button, .breadcrumbs, .nav.il-maincontrols,
 	display: none;
 }
 
-/* Modify the grid to make it work without the breadcrumbs, ...otherwise it looks ugly */
-.il-layout-page {
-	grid-template-rows: 60px auto 0px 1fr;
-}
-
-@media only screen and (max-width: 768px) {
-	.il-layout-page {
-    	grid-template-rows: 45px auto 1fr;
-	}
-}
-
 /* Using a fixed MainHeader with an user image and some options in kioskmode a kioskOption header */
 .header-inner, footer {
 	background-color: #003311;
@@ -23,16 +12,16 @@ p.ilStartupSection, .ilContentFixed button, .breadcrumbs, .nav.il-maincontrols,
 }
 
 .header-inner .glyphicon {
-	filter: initial;	
+	filter: initial;
 }
 
-.il-maincontrols-metabar > li > .btn-bulky .glyphicon,
-.il-maincontrols-metabar > li > .link-bulky .glyphicon {
+.il-maincontrols-metabar > li > .btn-bulky:not(.engaged) .glyphicon,
+.il-maincontrols-metabar > li > .link-bulky:not(.engaged) .glyphicon {
 	color: #fff;
 }
 
 .header-inner .il-logo, .header-inner .il-pagetitle {
-	width: 100%;	
+	width: 100%;
 }
 
 .header-inner .il-pagetitle {

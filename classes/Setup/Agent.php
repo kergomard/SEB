@@ -24,16 +24,25 @@
 
 declare(strict_types=1);
 
-/**
- * @ilCtrl_isCalledBy ilSEBCheckKeyGUI: ilObjComponentSettingsGUI, ilUIPluginRouterGUI
- */
-class ilSEBCheckKeyGUI extends ilUIPluginRouterGUI
+namespace kergomard\SEB\Setup;
+
+use ILIAS\Setup\Agent\NullAgent;
+use ILIAS\Setup\Objective;
+use ILIAS\Setup\Metrics\Storage;
+use ILIAS\Setup;
+use ILIAS\Setup\Config;
+
+class Agent extends NullAgent
 {
-    public function executeCommand(): void
+    use Setup\Agent\HasNoNamedObjective;
+
+    public function getUpdateObjective(Config $config = null): Objective
     {
-        global $DIC;
-        if ($DIC->ctrl()->getCmd() === ilSEBPlugin::CHECK_KEY_COMMAND) {
-            echo true;
-        }
+        return new \ilDatabaseUpdateStepsExecutedObjective(new DBSetup());
+    }
+
+    public function getStatusObjective(Storage $storage): Objective
+    {
+        return new \ilDatabaseUpdateStepsMetricsCollectedObjective($storage, new DBSetup());
     }
 }

@@ -1,19 +1,18 @@
-<?php  declare(strict_types = 1);
-/**
- * Copyright (c) 2017 Hochschule Luzern
- *
- * This file is part of the SEB-Plugin for ILIAS.
+<?php
 
+/**
+ * This file is part of the SEB-Plugin for ILIAS.
+ *
  * SEB-Plugin for ILIAS is free software: you can redistribute
  * it and/or modify it under the terms of the GNU General Public License
  * as published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
-
+ *
  * SEB-Plugin for ILIAS is distributed in the hope that
  * it will be useful, but WITHOUT ANY WARRANTY; without even the implied
  * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
-
+ *
  * You should have received a copy of the GNU General Public License
  * along with SEB-Plugin for ILIAS.  If not,
  * see <http://www.gnu.org/licenses/>.
@@ -23,160 +22,172 @@
  * <https://github.com/hrz-unimr/Ilias.SEBPlugin>
  */
 
-use ILIAS\DI\UIServices;
+declare(strict_types=1);
 
+use kergomard\SEB\Config\Config;
+
+use ILIAS\UI\Factory as UIFactory;
+use ILIAS\UI\Renderer as UIRenderer;
+use ILIAS\HTTP\Services as HTTPServices;
+use ILIAS\UI\Component\Input\Container\Form\Form;
+
+/**
+ * @ilCtrl_isCalledBy ilSEBConfigGUI: ilObjComponentSettingsGUI
+ */
 class ilSEBConfigGUI extends ilPluginConfigGUI
 {
-    private $pl;
-    private $config;
-    private $ui;
-    private $lang;
-    private $ctrl;
-    private $rbac_review;
-    private $http;
-    
-    public function performCommand($cmd)
+    private const CMD_CONFIGURE = 'configure';
+    private const CMD_SAVE = 'save';
+
+    private ilSEBPlugin $pl;
+    private Config $config;
+    private ilGlobalTemplateInterface $tpl;
+    private UIFactory $ui_factory;
+    private UIRenderer $ui_renderer;
+    private ilLanguage $lang;
+    private ilCtrl $ctrl;
+    private ilRbacReview $rbac_review;
+    private HTTPServices $http;
+
+    public function performCommand(string $cmd): void
     {
         switch ($cmd) {
-            case "configure":
-            case "save":
+            case self::CMD_CONFIGURE:
+            case self::CMD_SAVE:
+                /** @var ILIAS\DI\Container $DIC */
                 global $DIC;
                 $this->pl = $this->getPluginObject();
-                $this->config = new ilSEBConfig($DIC->database());
-                $this->ui = $DIC->ui();
-                $this->lang = $DIC->language();
-                $this->ctrl = $DIC->ctrl();
-                $this->rbac_review = $DIC->rbac()->review();
-                $this->http = $DIC->http();
+                $this->config = new Config($DIC->database());
+                $this->tpl = $DIC['tpl'];
+                $this->ui_factory = $DIC['ui.factory'];
+                $this->ui_renderer = $DIC['ui.renderer'];
+                $this->lang = $DIC['lng'];
+                $this->ctrl = $DIC['ilCtrl'];
+                $this->rbac_review = $DIC['rbacreview'];
+                $this->http = $DIC['http'];
                 $this->$cmd();
                 break;
 
         }
     }
-    
-    public function configure() : void
-    {
-        $form = $this->initConfigurationForm();
-        $this->ui->mainTemplate()->setContent($form->getHTML());
-    }
-    
-    public function initConfigurationForm() : ilPropertyFormGUI
-    {
-        $roles = array(0 => $this->pl->txt("role_none"),1 => $this->pl->txt("role_all_except_admin"));
-        
-        include_once("Services/Form/classes/class.ilPropertyFormGUI.php");
-        $form = new ilPropertyFormGUI();
-        
-        // allow object keys
-        $allow_object_keys_cb = new ilCheckboxInputGUI($this->pl->txt("allow_object_keys"), "allow_object_keys");
-        $allow_object_keys_cb->setInfo($this->pl->txt("allow_object_keys_info"));
-        $allow_object_keys_cb->setChecked($this->config->getAllowObjectKeys());
-        $form->addItem($allow_object_keys_cb);
-        
-        // SEB key
-        $seb_keys_txt = new ilTextInputGUI($this->pl->txt("seb_keys"), "seb_keys");
-        $seb_keys_txt->setInfo($this->pl->txt("seb_keys_info"));
-        $seb_keys_txt->setMaxLength(2000);
-        $seb_keys_txt->setValue($this->config->getSEBKeysString());
-        $form->addItem($seb_keys_txt);
-        
-        // global role access deny
-        $gr = $this->rbac_review->getGlobalRoles();
-        
-        foreach ($gr as $rid) {
-            //if ($role_id != 2 && $role_id != 5 && $role_id != 14) {
-            if ($rid != 2 && $rid != 14) { // no admin no anomymous
-                $roles[$rid] = ilObject::_lookupTitle($rid);
-            }
-        }
-        $role_deny_sel = new ilSelectInputGUI($this->pl->txt("role_deny"), "role_deny");
-        $role_deny_sel->setInfo($this->pl->txt("role_deny_info"));
-        $role_deny_sel->setRequired(false);
-        $role_deny_sel->setOptions($roles);
-        $role_deny_sel->setValue($this->config->getRoleDeny());
-        $form->addItem($role_deny_sel);
-        
-        $role_kiosk_sel = new ilSelectInputGUI($this->pl->txt("role_kiosk"), "role_kiosk");
-        $role_kiosk_sel->setInfo($this->pl->txt("role_kiosk_info"));
-        $role_kiosk_sel->setRequired(false);
-        $role_kiosk_sel->setOptions($roles);
-        $role_kiosk_sel->setValue($this->config->getRoleKiosk());
-        $form->addItem($role_kiosk_sel);
-        
-        $activate_session_control_cb = new ilCheckboxInputGUI($this->pl->txt('activate_session_control'), 'activate_session_control');
-        $security = ilSecuritySettings::_getInstance();
-        if ($security->isPreventionOfSimultaneousLoginsEnabled()) {
-            $activate_session_control_cb->setInfo($this->pl->txt('activate_session_control_info'));
-        } else {
-            $activate_session_control_cb->setInfo($this->pl->txt('activate_session_control_info_disabled'));
-            $activate_session_control_cb->setDisabled(true);
-        }
-        $activate_session_control_cb->setChecked($this->config->getActivateSessionControl());
-        $form->addItem($activate_session_control_cb);
-        
-        $show_pax_pic_cb = new ilCheckboxInputGUI($this->pl->txt('show_pax_pic'), 'show_pax_pic');
-        $show_pax_pic_cb->setInfo($this->pl->txt('show_pax_pic_info'));
-        $show_pax_pic_cb->setChecked($this->config->getShowPaxPic());
-        $form->addItem($show_pax_pic_cb);
-        
-        $show_pax_matriculation_cb = new ilCheckboxInputGUI($this->pl->txt('show_pax_matriculation'), 'show_pax_matriculation');
-        $show_pax_matriculation_cb->setInfo($this->pl->txt('show_pax_matriculation_info'));
-        $show_pax_matriculation_cb->setChecked($this->config->getShowPaxMatriculation());
-        $form->addItem($show_pax_matriculation_cb);
-        
-        $show_pax_username_cb = new ilCheckboxInputGUI($this->pl->txt('show_pax_username'), 'show_pax_username');
-        $show_pax_username_cb->setInfo($this->pl->txt('show_pax_username_info'));
-        $show_pax_username_cb->setChecked($this->config->getShowPaxUsername());
-        $form->addItem($show_pax_username_cb);
 
-        $ilias_root_txt = new ilTextInputGUI($this->pl->txt("ilias_root_uri"), "ilias_root_uri");
-        $ilias_root_txt->setInfo($this->pl->txt("ilias_root_uri_info"));
-        $ilias_root_txt->setMaxLength(1000);
-        if ($this->config->getIliasRootUri() !== '') {
-            $ilias_root_txt->setValue($this->config->getIliasRootUri());
-        } else {
+    public function configure(): void
+    {
+        $this->tpl->setContent(
+            $this->ui_renderer->render(
+                $this->initConfigurationForm()
+            )
+        );
+    }
+
+    public function save(): void
+    {
+        $form = $this->initConfigurationForm()
+            ->withRequest($this->http->request());
+        $data = $form->getData();
+        if ($data === null) {
+            $this->tpl->setContent($this->ui_renderer->render($form));
+            return;
+        }
+
+        $this->config->setOnScreenMessage(
+            $this->tpl,
+            $this->pl,
+            $this->config->saveSEBConf($data['configuration'])
+        );
+
+        $this->configure();
+    }
+
+    private function initConfigurationForm(): Form
+    {
+        $ff = $this->ui_factory->input()->field();
+
+        $global_roles_options = $this->buildGlobalRolesSelectionArray();
+        $root_uri = $this->config->getIliasRootUri();
+        if ($root_uri === '') {
             $uri = $this->http->request()->getUri();
-            $ilias_root_txt->setValue($uri->getScheme() . "://" . $uri->getHost() . $uri->getPort());
+            $root_uri = $uri->getScheme() . '://' . $uri->getHost() . $uri->getPort();
         }
-        $form->addItem($ilias_root_txt);
 
-        $form->addCommandButton('save', $this->lang->txt('save'));
-                    
-        $form->setTitle($this->pl->txt('config'));
-        $form->setFormAction($this->ctrl->getFormAction($this));
-        
-        return $form;
+        $session_control_enabled = ilSecuritySettings::_getInstance()
+            ->isPreventionOfSimultaneousLoginsEnabled();
+
+        return $this->ui_factory->input()->container()->form()->standard(
+            $this->ctrl->getFormActionByClass(
+                [
+                    ilAdministrationGUI::class,
+                    ilObjComponentSettingsGUI::class,
+                    self::class
+                ],
+                self::CMD_SAVE
+            ),
+            ['configuration' => $ff->section(
+                [
+                    'allow_object_keys' => $ff->checkbox(
+                        $this->pl->txt('allow_object_keys'),
+                        $this->pl->txt('allow_object_keys_info')
+                    )->withValue($this->config->getAllowObjectKeys()),
+                    'seb_keys' => $ff->text(
+                        $this->pl->txt('seb_keys'),
+                        $this->pl->txt('seb_keys_info')
+                    )->withMaxLength(Config::MAX_KEYS_LENGTH)
+                    ->withValue($this->config->getSEBKeysString()),
+                    'role_deny' => $ff->select(
+                        $this->pl->txt('role_deny'),
+                        $global_roles_options
+                    )->withRequired(true)
+                    ->withByline($this->pl->txt('role_deny_info'))
+                    ->withValue($this->config->getRoleDeny()),
+                    'role_kiosk' => $ff->select(
+                        $this->pl->txt('role_kiosk'),
+                        $global_roles_options
+                    )->withRequired(true)
+                    ->withByline($this->pl->txt('role_kiosk_info'))
+                    ->withValue($this->config->getRoleKiosk()),
+                    'activate_session_control' => $ff->checkbox(
+                        $this->pl->txt('activate_session_control'),
+                        $session_control_enabled
+                            ? $this->pl->txt('activate_session_control_info')
+                            : $this->pl->txt('activate_session_control_info_disabled')
+                    )->withValue($this->config->getActivateSessionControl())
+                    ->withDisabled(!$session_control_enabled),
+                    'show_pax_pic' => $ff->checkbox(
+                        $this->pl->txt('show_pax_pic'),
+                        $this->pl->txt('show_pax_pic_info')
+                    )->withValue($this->config->getShowPaxPic()),
+                    'show_pax_matriculation' => $ff->checkbox(
+                        $this->pl->txt('show_pax_matriculation'),
+                        $this->pl->txt('show_pax_matriculation_info')
+                    )->withValue($this->config->getShowPaxMatriculation()),
+                    'show_pax_username' => $ff->checkbox(
+                        $this->pl->txt('show_pax_username'),
+                        $this->pl->txt('show_pax_username_info')
+                    )->withValue($this->config->getShowPaxUsername()),
+                    'ilias_root_uri' => $ff->text(
+                        $this->pl->txt('ilias_root_uri'),
+                        $this->pl->txt('ilias_root_uri_info')
+                    )->withMaxLength(Config::MAX_URI_LENGTH)
+                    ->withValue($root_uri)
+                ],
+                $this->pl->txt('config')
+            )]
+        );
     }
-    
-    public function save() : void
-    {
-        $form = $this->initConfigurationForm();
-        if ($form->checkInput()) {
-            // ToDo validate
-            
-            $form_input['seb_keys'] = $form->getInput('seb_keys');
-            $form_input['allow_object_keys'] = $form->getInput('allow_object_keys');
-            $form_input['role_deny'] = $form->getInput('role_deny');
-            $form_input['role_kiosk'] = $form->getInput('role_kiosk');
-            $form_input['activate_session_control'] = $form->getInput('activate_session_control');
-            $form_input['show_pax_pic'] = $form->getInput('show_pax_pic');
-            $form_input['show_pax_matriculation'] = $form->getInput('show_pax_matriculation');
-            $form_input['show_pax_username'] = $form->getInput('show_pax_username');
-            $form_input['ilias_root_uri'] = $form->getInput('ilias_root_uri');
-            
-            $success = $this->config->saveSEBConf($form_input);
 
-            if ($success < 0) {
-                ilUtil::sendFailure($this->pl->txt("save_failure"), true);
-            } elseif ($success == 0) {
-                ilUtil::sendInfo($this->pl->txt("nothing_changed"), true);
-            } else {
-                ilUtil::sendSuccess($this->pl->txt("save_success"), true);
-            }
-            $this->configure();
-        } else {
-            $form->setValuesByPost();
-            $this->ui->mainTemplate()->setContent($form->getHtml());
-        }
+    private function buildGlobalRolesSelectionArray(): array
+    {
+        $roles = [
+            0 => $this->pl->txt('role_none'),
+            1 => $this->pl->txt('role_all_except_admin')
+        ];
+        return array_reduce(
+            $this->rbac_review->getGlobalRoles(),
+            static function (array $c, int $v): array {
+                $c[$v] = ilObject::_lookupTitle($v);
+                return $c;
+            },
+            $roles
+        );
     }
 }

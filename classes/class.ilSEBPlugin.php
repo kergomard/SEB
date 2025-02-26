@@ -1,19 +1,18 @@
-<?php declare(strict_types=1);
-/**
- * Copyright (c) 2017 Hochschule Luzern
- *
- * This file is part of the SEB-Plugin for ILIAS.
+<?php
 
+/**
+ * This file is part of the SEB-Plugin for ILIAS.
+ *
  * SEB-Plugin for ILIAS is free software: you can redistribute
  * it and/or modify it under the terms of the GNU General Public License
  * as published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
-
+ *
  * SEB-Plugin for ILIAS is distributed in the hope that
  * it will be useful, but WITHOUT ANY WARRANTY; without even the implied
  * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
-
+ *
  * You should have received a copy of the GNU General Public License
  * along with SEB-Plugin for ILIAS.  If not,
  * see <http://www.gnu.org/licenses/>.
@@ -23,21 +22,26 @@
  * <https://github.com/hrz-unimr/Ilias.SEBPlugin>
  */
 
-include_once 'class.ilSEBGlobalScreenModificationProvider.php';
-include_once 'class.ilSEBConfig.php';
-include_once 'class.ilSEBAccessChecker.php';
+declare(strict_types=1);
+
+use kergomard\SEB\Access\Checker;
+use kergomard\SEB\Config\Config;
+use kergomard\SEB\Presentation\ScreenModificationProvider;
+
+use ILIAS\HTTP\Wrapper\ArrayBasedRequestWrapper;
+use ILIAS\Refinery\Factory as Refinery;
 
 class ilSEBPlugin extends ilUserInterfaceHookPlugin
 {
-    const SEB_REQUEST_TYPES = [
+    public const SEB_REQUEST_TYPES = [
         'seb_request_invalid' => -1,
         'not_a_seb_request' => 0,
         'seb_request_object_keys_unspecific' => 1,
         'seb_request' => 2,
         'seb_request_object_keys' => 3
     ];
-    
-    const REQUESTS_THAT_DONT_NEED_OBJECT_SPECIFIC_KEYS = [
+
+    public const REQUESTS_THAT_DONT_NEED_OBJECT_SPECIFIC_KEYS = [
         'context_check' => [
             ilContext::CONTEXT_WAC
         ],
@@ -62,46 +66,50 @@ class ilSEBPlugin extends ilUserInterfaceHookPlugin
             ]
         ]
     ];
-    
-    const REQ_HEADER = 'X-Safeexambrowser-Requesthash';
-    const STANDARD_BASE_CLASS = 'ilUIPluginRouterGUI';
-    const SEB_CHECK_KEY_GUI_DEFINITION = array(self::STANDARD_BASE_CLASS, ilSEBCheckKeyGUI::class);
-    const CHECK_KEY_COMMAND = 'CheckKey';
-    
-    const SEB_DATA_MODE = [
+
+    public const REQ_HEADER = 'X-Safeexambrowser-Requesthash';
+    public const STANDARD_BASE_CLASS = 'ilUIPluginRouterGUI';
+    public const SEB_CHECK_KEY_GUI_DEFINITION = [self::STANDARD_BASE_CLASS, ilSEBCheckKeyGUI::class];
+    public const CHECK_KEY_COMMAND = 'checkKey';
+
+    public const SEB_DATA_MODE = [
         'header' => 0,
         'cookie' => 1,
         'none' => 2
     ];
-    
+
     private static $forbidden = false;
     private static $kioskmode_checked = false;
-    
-    private $seb_config;
-    private $access_checker;
-    
-    private $current_ref_id;
-    
-    public function __construct()
-    {
-        parent::__construct();
-        global $DIC;
-        $ctrl = $DIC->ctrl();
-        
+
+    private Config $config;
+
+    private ?int $current_ref_id = null;
+
+    public function __construct(
+        \ilDBInterface $db,
+        \ilComponentRepositoryWrite $component_repository,
+        string $id
+    ) {
+        parent::__construct($db, $component_repository, $id);
         /*
          * We don't want this to be executed on the commandline, as it makes the setup fail
          */
-        if (php_sapi_name() === 'cli' || $ctrl->getCmd() === 'installPlugin') {
+        if (php_sapi_name() === 'cli') {
             return;
         }
-        
-        $user = $DIC->user();
+
+        /** @var ILIAS\DI\Container $DIC */
+        global $DIC;
+        $ctrl = $DIC['ilCtrl'];
+
+        $user = $DIC['ilUser'];
         $auth = $DIC['ilAuthSession'];
-        $rbac_review = $DIC->rbac()->review();
-        $http = $DIC->http();
-        $database = $DIC->database();
+        $rbac_review = $DIC['rbacreview'];
+        $refinery = $DIC['refinery'];
+        $http = $DIC['http'];
+        $database = $DIC['ilDB'];
         $layout_meta = $DIC->globalScreen()->layout()->meta();
-        
+
         /*
          * This is ugly, but we need this to avoid an endless loop when redirecting to the "Forbidden"-Page
          * See the Comment below for the one and only place this MUST be set.
@@ -109,112 +117,148 @@ class ilSEBPlugin extends ilUserInterfaceHookPlugin
         if (self::$forbidden) {
             return;
         }
-        
-        $this->current_ref_id = $this->extractRefIdFromQuery($http->request()->getQueryParams());
-        $this->seb_config = new ilSEBConfig($database);
-        
-        $this->access_checker = new ilSEBAccessChecker(
-            $this->getCurrentRefId(),
+
+        $this->current_ref_id = $this->retrieveRefIdFromQuery(
+            $http->wrapper()->query(),
+            $refinery
+        );
+        $this->config = new Config($database);
+
+        $access_checker = new Checker(
+            $this->current_ref_id,
             $ctrl,
             $user,
             $auth,
             $rbac_review,
+            $refinery,
             $http,
-            $this->seb_config
+            $this->config
         );
-        
-        $layout_meta->addJs($this->getDirectory() . '/templates/default/seb.js', true);
-        $ctrl->setParameterByClass(ilUIPluginRouterGUI::class, 'ref_id', $this->current_ref_id);
-        $layout_meta->addOnloadCode("il.seb.saveAndCheckSEBKey('" .
-            $ctrl->getLinkTargetByClass(self::SEB_CHECK_KEY_GUI_DEFINITION, self::CHECK_KEY_COMMAND) . "');");
-        
-        if ($this->access_checker->isKeyCheckPossibleOrUnavoidable() && !$this->access_checker->isCurrentUserAllowed()) {
+
+        if ($access_checker->isKeyCheckPossibleOrUnavoidable() && !$access_checker->isCurrentUserAllowed()) {
             /*
              * This is ugly, but we need this to avoid an endless loop when redirecting to the "Forbidden"-Page
              * This is the one and only place this MUST be set.
              */
             self::$forbidden = true;
-            
-            $this->access_checker->exitIlias($this);
+            $access_checker->exitIlias($this);
         }
-        
+
         /*
          * We need to switch the kioskmode off in tests to avoid collitions in certain modification providers
          * for the GlobalScreen. We need to check this here, because there simply is no other place.
          */
-        if (!self::$kioskmode_checked &&
-            $this->access_checker->isSwitchToSebSkinNeeded() &&
-            ilObject::_lookupType($this->current_ref_id, true) == 'tst'
+        if (!self::$kioskmode_checked
+            && $access_checker->isSwitchToSebSkinNeeded()
+            && $this->current_ref_id !== null
+            && ilObject::_lookupType($this->current_ref_id, true) === 'tst'
         ) {
-            $test = new ilObjTest($this->getCurrentRefId());
-            if ($test->getKioskMode() === true) {
-                $test->setKioskMode();
-                $test->saveToDb();
-            }
-            
-            self::$kioskmode_checked = true;
+            $this->disableKioskMode();
         }
-        
-        if ($this->access_checker->isSwitchToSebSkinNeeded() &&
-            (self::$kioskmode_checked ||
-            ilObject::_lookupType($this->current_ref_id, true) != 'tst')) {
+
+        $layout_meta->addJs($this->getDirectory() . '/resources/js/dist/seb.js', true);
+        $ctrl->setParameterByClass(ilUIPluginRouterGUI::class, 'ref_id', $this->current_ref_id);
+        $layout_meta->addOnloadCode(
+            "il.seb.saveAndCheckSEBKey('{$ctrl->getLinkTargetByClass(self::SEB_CHECK_KEY_GUI_DEFINITION, self::CHECK_KEY_COMMAND)}');"
+        );
+
+        if ($access_checker->isSwitchToSebSkinNeeded()
+            && (self::$kioskmode_checked
+                || $this->current_ref_id === null
+                || ilObject::_lookupType($this->current_ref_id, true) !== 'tst')) {
             $this->provider_collection
-           ->setModificationProvider(new ilSEBGlobalScreenModificationProvider($DIC, $this));
+                ->setModificationProvider(new ScreenModificationProvider($DIC, $this));
         }
     }
-    
-    public function getPluginName() : string
+
+    public function getPluginName(): string
     {
-        return "SEB";
+        return 'SEB';
     }
-    
-    public function getCurrentRefId() : ?int
+
+    public function getCurrentRefId(): ?int
     {
         return $this->current_ref_id;
     }
-    
-    public function isShowParticipantPicture() : bool
+
+    public function isShowParticipantPicture(): bool
     {
-        return $this->seb_config->getShowPaxPic();
+        return $this->config->getShowPaxPic();
     }
-    
-    public function isShowParticipantMatriculation() : bool
+
+    public function isShowParticipantMatriculation(): bool
     {
-        return $this->seb_config->getShowPaxMatriculation();
+        return $this->config->getShowPaxMatriculation();
     }
-    
-    public function isShowParticipantUsername() : bool
+
+    public function isShowParticipantUsername(): bool
     {
-        return $this->seb_config->getShowPaxUsername();
+        return $this->config->getShowPaxUsername();
     }
-    
-    public function handleEvent(string $a_component, string $a_event, array $a_parameter) : void
-    {
+
+    public function handleEvent(
+        string $a_component,
+        string $a_event,
+        array $a_parameter
+    ): void {
         if ($a_event === 'afterLogin') {
             ilSession::clear('last_uri');
         }
     }
-    
-    private function extractRefIdFromQuery(array $query) : ?int
+
+    private function disableKioskMode(): void
     {
-        if (array_key_exists('ref_id', $query) && is_numeric($query['ref_id']) && $query['ref_id'] > 0) {
-            return (int) $query['ref_id'];
+        $test = new ilObjTest($this->current_ref_id);
+        if ($test->getKioskMode() === true) {
+            $test->setKioskMode();
+            $test->saveToDb();
         }
-        
-        if (array_key_exists('target', $query)) {
-            return $this->extractRefIdFromTargetParameter($query['target']);
+
+        self::$kioskmode_checked = true;
+    }
+
+    private function retrieveRefIdFromQuery(
+        ArrayBasedRequestWrapper $query,
+        Refinery $refinery
+    ): ?int {
+        $ref_id = $query->retrieve(
+            'ref_id',
+            $refinery->byTrying([
+                $refinery->kindlyTo()->int('ref_id'),
+                $refinery->always(0)
+            ])
+        );
+        if ($ref_id > 0) {
+            return $ref_id;
         }
-        
+
+        if ($query->has('target')) {
+            return $this->extractRefIdFromTargetParameter(
+                $query->retrieve(
+                    'target',
+                    $refinery->byTrying([
+                        $refinery->custom()->transformation(
+                           fn (string $v): ?int => $this->extractRefIdFromTargetParameter($v)
+                        ),
+                        $refinery->always(null)
+                    ])
+                )
+            );
+        }
+
         return null;
     }
-    
-    private function extractRefIdFromTargetParameter(String $target) : ?int
+
+    private function extractRefIdFromTargetParameter(int|string $target): ?int
     {
+        if (is_int($target)) {
+            return $target;
+        }
         $target_array = explode('_', $target);
         if (is_numeric($target_array[1]) && $target_array[1] > 0) {
             return (int) $target_array[1];
         }
-        
+
         return null;
     }
 }

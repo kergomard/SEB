@@ -1,19 +1,18 @@
-<?php  declare(strict_types=1);
-/**
- * Copyright (c) 2017 Hochschule Luzern
- *
- * This file is part of the SEB-Plugin for ILIAS.
+<?php
 
+/**
+ * This file is part of the SEB-Plugin for ILIAS.
+ *
  * SEB-Plugin for ILIAS is free software: you can redistribute
  * it and/or modify it under the terms of the GNU General Public License
  * as published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
-
+ *
  * SEB-Plugin for ILIAS is distributed in the hope that
  * it will be useful, but WITHOUT ANY WARRANTY; without even the implied
  * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
-
+ *
  * You should have received a copy of the GNU General Public License
  * along with SEB-Plugin for ILIAS.  If not,
  * see <http://www.gnu.org/licenses/>.
@@ -23,152 +22,197 @@
  * <https://github.com/hrz-unimr/Ilias.SEBPlugin>
  */
 
-include_once 'class.ilSEBPlugin.php';
-include_once 'class.ilSEBTabGUI.php';
-include_once 'class.ilSEBSessionsTableGUI.php';
+declare(strict_types=1);
 
 /**
- * GUI Class to show a tab to manage Sessions in Test Object
- *
- * @author Stephan Winiker <stephan.winiker@hslu.ch>
- *
  * @ilCtrl_isCalledBy ilSEBSessionsTabGUI: ilRouterGUI, ilUIPluginRouterGUI
  */
 class ilSEBSessionsTabGUI extends ilSEBTabGUI
 {
-    public function executeCommand() : void
+    public function executeCommand(): void
     {
-        if ($this->rbac_system->checkAccess('write', $this->ref_id) && (in_array(($cmd = $this->ctrl->getCmd()), ['showSessions', 'applyFilter', 'resetFilter', 'confirmDeleteSessions', 'deleteSessions']))) {
-            switch ($cmd) {
-                case 'showSessions':
-                case 'applyFilter':
-                    $this->showSessions('show');
-                    break;
-                case 'resetFilter':
-                    $this->showSessions('reset');
-                    break;
-                case 'confirmDeleteSessions':
-                    $this->confirmDeleteSessions();
-                    break;
-                case 'deleteSessions':
-                    $this->deleteSessions();
-                    break;
-            }
-        } else {
-            $this->ctrl->returnToParent($this);
+        switch ($this->ctrl->getCmd()) {
+            case 'showSessions':
+            case 'applyFilter':
+                $this->showSessions('show');
+                break;
+            case 'resetFilter':
+                $this->showSessions('reset');
+                break;
+            case 'confirmDeleteSessions':
+                $this->confirmDeleteSessions();
+                break;
+            case 'deleteSessions':
+                $this->deleteSessions();
+                break;
+            default:
+                $this->ctrl->returnToParent($this);
         }
     }
-    
+
     /**
-     * @param string $mode One of 'show' indicating that the list of sessions should simply be shown applying all filters or 'reset' if the filters need to be reset
+     * @param string $mode One of 'show' indicating that the list of sessions
+     * should simply be shown applying all filters or 'reset' if the filters
+     * need to be reset
      */
-    private function showSessions(string $mode) : void
+    private function showSessions(string $mode): void
     {
         $this->setupUI();
-        
-        if (($sessions = $this->getSessionsArrayOfTestParticipants()) &&
-                ($users = $this->addUsersInfoToSessionsArray($sessions))) {
-            if ($mode == 'reset') {
-                unset($_POST['user']);
-            } elseif (isset($_POST['user']) && $_POST['user'] != '') {
-                foreach ($users as $index => $user) {
-                    if (!stristr($user['login'], $_POST['user']) &&
-                            !stristr($user['first_name'], $_POST['user']) &&
-                            !stristr($user['last_name'], $_POST['user'])) {
-                        unset($users[$index]);
-                    }
-                }
-            }
-        } else {
-            $users = [];
-        }
-        
+
+        $users = $this->filterUsers(
+            $this->addUsersInfoToSessionsArray(
+                $this->getSessionsArrayOfTestParticipants()
+            )
+        );
+
         $this->initSessionTable($users, 'confirmDeleteSessions');
     }
-    
-    private function confirmDeleteSessions() : void
+
+    private function confirmDeleteSessions(): void
     {
         $this->setupUI();
-        
-        if (count($_POST['id']) > 0) {
-            $sessions = implode("','", $_POST['id']);
-            $q = $this->db->query("SELECT session_id, user_id FROM usr_session WHERE session_id IN (" . $this->db->quote($sessions, 'text') . ") AND expires > " . time());
-            $sessions = $this->db->fetchAll($q);
-            $users = $this->addUsersInfoToSessionsArray($sessions);
-            $this->initSessionTable($users, 'deleteSessions');
-        } else {
-            ilUtil::sendInfo($this->pl->txt('no_sessions_selected'));
+
+        if ($this->retrieveIdsFromPost() === []) {
+            $this->tpl->setOnScreenMessage('failure', $this->pl->txt('no_sessions_selected'));
             $this->showSessions('show');
+            return;
         }
+            $sessions = $this->db->fetchAll(
+                $this->db->query(
+                    'SELECT session_id, user_id FROM usr_session WHERE '
+                    . $this->db->in(
+                        'session_id',
+                        $ids,
+                        false,
+                        ilDBConstants::T_INTEGER
+                    ) . ' AND expires > ' . time()
+                )
+            );
+
+            $this->initSessionTable(
+                $this->addUsersInfoToSessionsArray($sessions),
+                'deleteSessions'
+            );
     }
-    
-    private function deleteSessions() : void
+
+    private function deleteSessions(): void
     {
-        foreach ($_POST['id'] as $session) {
+        foreach ($this->retrieveIdsFromPost() as $session) {
             ilSession::_destroy($session);
         }
-        
-        ilUtil::sendSuccess($this->pl->txt('sessions_deleted'));
+
+        $this->tpl->setOnScreenMessage('success', $this->pl->txt('sessions_deleted'));
         $this->showSessions('show');
     }
-    
-    /**
-     * @param array $users of all users with sessions to be shown in the table
-     * @param string $action One of 'confirmDeleteSessions' if you want to show the participant table or 'deleteSessions' if a list of sessions should be shown for confirmation
-     */
-    private function initSessionTable(array $users, string $action) : void
+
+    private function initSessionTable(array $users, string $action): void
     {
         $sessions_table = new ilSEBSessionsTableGUI($this, $action, $this->pl, $this->lang);
         $sessions_table->setData($users);
-        
-        if (isset($_GET['_table_nav'])) {
-            $ordering = explode(':', $_GET['_table_nav']);
-            
-            if (in_array($ordering[0], ['login', 'first_name', 'last_name']) &&
-                    in_array($ordering[1], ['asc', 'desc'])) {
+        $sessions_table->setFilter(
+            $this->http->wrapper()->post()->retrieve(
+                'user',
+                $this->refinery->byTrying([
+                    $this->refinery->kindlyTo()->string(),
+                    $this->refinery->always('')
+                ])
+            )
+        );
+
+        if ($this->http->wrapper()->query()->has('_table_nav')) {
+            $ordering = $this->http->wrapper->query()->retrieve(
+                '_table_nav',
+                $this->refinery->byTrying([
+                    $this->refinery->custom()->transformation(
+                        fn (string $v): array => explode(':', $v)
+                    ),
+                    $this->refinery->always([])
+                ])
+            );
+
+            if (in_array($ordering[0], ['login', 'first_name', 'last_name'])
+                && in_array($ordering[1], ['asc', 'desc'])) {
                 $sessions_table->setOrderColumn($ordering[0]);
-                $sessions_table->setOrderDirection($direction);
+                $sessions_table->setOrderDirection($ordering[1]);
             }
         }
-        
+
         $this->tpl->setContent($sessions_table->getHTML());
         $this->tpl->printToStdOut();
     }
-    
-    /**
-     * @return mixed An array of all the sessions or false if none where found
-     */
-    private function getSessionsArrayOfTestParticipants() : array
+
+    private function getSessionsArrayOfTestParticipants(): array
     {
-        $test = new ilObjTest($this->ref_id);
         $pax_data = new ilTestParticipantData($this->db, $this->lang);
-        $pax_data->load($test->getTestId());
-        $paxs_array = $pax_data->getUserIds();
-        
-        $paxs = implode("','", $paxs_array);
-        
-        $q = $this->db->query("SELECT session_id, user_id FROM usr_session WHERE user_id IN ('$paxs') AND expires > " . time());
-        return $this->db->fetchAll($q);
+        $pax_data->load((new ilObjTest($this->ref_id))->getTestId());
+
+        return $this->db->fetchAll(
+            $this->db->query(
+                'SELECT session_id, user_id FROM usr_session WHERE '
+                . $this->db->in(
+                    'user_id',
+                    $pax_data->getUserIds(),
+                    false,
+                    ilDBConstants::T_INTEGER
+                ) . 'AND expires > ' . time()
+            )
+        );
     }
-    
-    /**
-     * @param array An associative array containing user_id and session_id for each record
-     * @return array An array of sessions enriched with user information
-     */
-    private function addUsersInfoToSessionsArray(array $sessions) : array
+
+    private function filterUsers(array $users): array
     {
-        $users = [];
-        foreach ($sessions as $session) {
-            $user_obj = new ilObjUser($session['user_id']);
-            
-            if ($user_obj->getId() != $this->user->getId()) {
-                $users[$session['session_id']]['session_id'] = $session['session_id'];
-                $users[$session['session_id']]['login'] = $user_obj->getLogin();
-                $users[$session['session_id']]['first_name'] = $user_obj->getFirstname();
-                $users[$session['session_id']]['last_name'] = $user_obj->getLastname();
-            }
+        if ($users === []) {
+            return [];
         }
-        
-        return $users;
+        $user = $this->http->wrapper()->post()->retrieve(
+            'user',
+            $this->refinery->byTrying([
+                $this->refinery->kindlyTo()->string(),
+                $this->refinery->always(null)
+            ])
+        );
+        if ($user === null) {
+            return $users;
+        }
+        return array_filter(
+            $users,
+            fn (array $v): bool => mb_stristr($v['login'], $user)
+                || mb_stristr($v['first_name'], $user)
+                || mb_stristr($v['last_name'], $user)
+        );
+    }
+
+    private function addUsersInfoToSessionsArray(array $sessions): array
+    {
+        return array_reduce(
+            $sessions,
+            function (array $c, array $v): array {
+                $user_obj = new ilObjUser(
+                    $this->refinery->kindlyTo()->int()->transform($v['user_id'])
+                );
+
+                if ($user_obj->getId() === $this->user->getId()) {
+                    return $c;
+                }
+                $c[$v['session_id']]['session_id'] = $v['session_id'];
+                $c[$v['session_id']]['login'] = $user_obj->getLogin();
+                $c[$v['session_id']]['first_name'] = $user_obj->getFirstname();
+                return $c;
+            },
+            []
+        );
+    }
+
+    private function retrieveIdsFromPost(): array
+    {
+        return $this->http->wrapper()->post()->retrieve(
+            'id',
+            $this->refinery->byTrying([
+                $this->refinery->kindlyTo()->listOf(
+                    $this->refinery->int()
+                ),
+                $this->refinery->always([])
+            ])
+        );
     }
 }

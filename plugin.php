@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Copyright (c) 2017 Hochschule Luzern
  *
@@ -23,17 +24,9 @@
  * <https://github.com/hrz-unimr/Ilias.SEBPlugin>
  */
 
-// alphanumerical ID of the plugin; never change this
-$id = "seb";
-
-// code version; must be changed for all code changes
-$version = "2.6.1";
-
-// ilias min and max version; must always reflect the versions that should
-// run with the plugin
-$ilias_min_version = "7.0";
-$ilias_max_version = "7.99";
-
-// optional, but useful: Add one or more responsible persons and a contact email
-$responsible = "Stephan Winiker";
-$responsible_mail = "stephan.winiker@hslu.ch";
+$id = 'seb';
+$version = '2.7.0';
+$ilias_min_version = '8.0';
+$ilias_max_version = '8.99';
+$responsible = 'Stephan Kergomard';
+$responsible_mail = 'office@kergomard.ch';
