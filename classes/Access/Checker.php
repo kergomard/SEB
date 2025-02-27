@@ -43,7 +43,7 @@ class Checker
     private Config $config;
     private array $data;
     private ?int $ref_id = null;
-    private int $mode;
+    private int $mode = \ilSEBPlugin::SEB_DATA_MODE['none'];
 
     private bool $current_user_allowed;
     private bool $switch_to_seb_skin_needed;
@@ -52,7 +52,6 @@ class Checker
     {
         return $this->current_user_allowed;
     }
-
 
     public function isSwitchToSebSkinNeeded(): bool
     {
@@ -156,7 +155,17 @@ class Checker
             && $this->http->cookieJar()->has('uri')) {
             return \ilSEBPlugin::SEB_DATA_MODE['cookie'];
         }
+        if ($this->config->isInsecureUserAgentKeyEnabled()
+            && $this->http->request()->hasHeader('User-Agent')
+            && preg_match('/SEBKEY=(.*)/', $this->http->request()->getHeader('User-Agent')[0])) {
+            return \ilSEBPlugin::SEB_DATA_MODE['user_agent'];
+        }
         return \ilSEBPlugin::SEB_DATA_MODE['none'];
+    }
+
+    private function isInsecureUnhashedMode(): bool
+    {
+        return $this->mode === \ilSEBPlugin::SEB_DATA_MODE['user_agent'];
     }
 
     private function detectCurrentUserAllowed(
@@ -222,18 +231,31 @@ class Checker
     {
         $exam_key = $this->data['exam_key'];
 
-        if ($exam_key === "") {
+        if ($exam_key === '') {
             return \ilSebPlugin::SEB_REQUEST_TYPES['not_a_seb_request'];
         }
 
-        if ($this->config->checkSebKey($exam_key, $this->data['uri'])) {
+        if ($this->config->checkSebKey(
+                $exam_key,
+                $this->data['uri'],
+                $this->isInsecureUnhashedMode()
+            )) {
             return \ilSebPlugin::SEB_REQUEST_TYPES['seb_request'];
         }
-        if ($this->config->checkObjectKey($exam_key, $this->data['uri'], $ref_id)) {
+        if ($this->config->checkObjectKey(
+                $exam_key,
+                $this->data['uri'],
+                $ref_id,
+                $this->isInsecureUnhashedMode()
+            )) {
             return \ilSebPlugin::SEB_REQUEST_TYPES['seb_request_object_keys'];
         }
 
-        if (!$ref_id && $this->config->checkKeyAgainstAllObjectKeys($exam_key, $this->data['uri'])) {
+        if (!$ref_id && $this->config->checkKeyAgainstAllObjectKeys(
+                $exam_key,
+                $this->data['uri'],
+                $this->isInsecureUnhashedMode()
+            )) {
             return \ilSebPlugin::SEB_REQUEST_TYPES['seb_request_object_keys_unspecific'];
         }
 
@@ -253,6 +275,15 @@ class Checker
                 break;
             case \ilSEBPlugin::SEB_DATA_MODE['cookie']:
                 $data['exam_key'] = $this->http->cookieJar()->get('examKey');
+                break;
+            case \ilSEBPlugin::SEB_DATA_MODE['user_agent']:
+                preg_match(
+                    '/SEBKEY=([a-zA-Z0-9_]+)/',
+                    $this->http->request()->getHeader('User-Agent')[0],
+                    $matches
+                );
+                $data['exam_key'] = trim($matches[1]);
+                $data['uri'] = $this->retrieveFullUri();
                 break;
             default:
                 $data['exam_key'] = '';

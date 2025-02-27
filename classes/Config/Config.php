@@ -28,6 +28,15 @@ namespace kergomard\SEB\Config;
 
 class Config
 {
+    /**
+     * By setting this to true you can enable a check for a seb-key in the
+     * user-agent header. There are good reasons, why this setting can not
+     * be changed from the interface: It reduces the security guarantees
+     * provided by the SEB and this plugin drastically. If you are sure you
+     * know what you are doing, change the value to `true` to enable it.
+     */
+    private const ENABLE_INSECURE_USER_AGENT_KEY = false;
+
     public const MAX_CONFIG_VALUE_LENGTH = 2000;
     private const CMD_CLASSES_WITHOUT_SEB_KEY_TAB = [
         'ilsebsessionstabgui',
@@ -70,9 +79,22 @@ class Config
         return self::CMD_CLASSES_WITHOUT_SEB_KEY_TAB;
     }
 
-    public function checkSebKey(string $key_from_browser, string $request_url): bool
-    {
-        return $this->checkKeys($key_from_browser, $this->conf['seb_keys'], $request_url);
+    public function checkSebKey(
+        string $key_from_browser,
+        string $request_url,
+        bool $insecure_unhashed_check_needed
+    ): bool {
+        if ($insecure_unhashed_check_needed) {
+            return $this->insecurelyCheckKeysAgainstUnhashedUrls(
+                $key_from_browser,
+                $this->conf['seb_keys']
+            );
+        }
+        return $this->checkKeys(
+            $key_from_browser,
+            $this->conf['seb_keys'],
+            $request_url
+        );
     }
 
     public function getSebKeysString(): string
@@ -130,6 +152,11 @@ class Config
             return $this->conf['header_color'] ?? self::DEFAULT_HEADER_COLOR;
     }
 
+    public function isInsecureUserAgentKeyEnabled(): bool
+    {
+        return self::ENABLE_INSECURE_USER_AGENT_KEY;
+    }
+
     /**
      * @return string[]
      */
@@ -149,28 +176,42 @@ class Config
         ];
     }
 
-    public function checkObjectKey(string $key, string $url, ?int $ref_id): bool
-    {
+    public function checkObjectKey(
+        string $key,
+        string $url,
+        ?int $ref_id,
+        bool $insecure_unhashed_check_needed
+    ): bool {
         if ($ref_id === null || !$this->conf['allow_object_keys']) {
             return false;
         }
 
         $keys = $this->getObjectKeys($ref_id);
-        if ($keys['seb_key_win'] != '' || $keys['seb_key_macos'] != '') {
-            $keys_merged = array_merge(explode(',', $keys['seb_key_win']), explode(',', $keys['seb_key_macos']));
-            return $this->checkKeys($key, $keys_merged, $url);
+        if ($keys['seb_key_win'] === '' && $keys['seb_key_macos'] === '') {
+            return false;
         }
 
-        return false;
+        $merged_keys = array_merge(
+            explode(',', $keys['seb_key_win']),
+            explode(',', $keys['seb_key_macos'])
+        );
+
+        if ($insecure_unhashed_check_needed) {
+            return $this->insecurelyCheckKeysAgainstUnhashedUrls($key, $merged_keys);
+        }
+
+        return $this->checkKeys($key, $merged_keys, $url);
     }
 
-    public function checkKeyAgainstAllObjectKeys(string $key, string $url): bool
-    {
+    public function checkKeyAgainstAllObjectKeys(
+        string $key,
+        string $url,
+        bool $insecure_unhashed_check_needed
+    ): bool {
         if (!$this->conf['allow_object_keys']) {
             return false;
         }
 
-        ;
         $keys = array_reduce(
             $this->db->fetchAll(
                 $this->db->query('SELECT seb_key_win, seb_key_macos FROM ui_uihk_seb_keys')
@@ -185,6 +226,10 @@ class Config
 
         if ($keys === []) {
             return false;
+        }
+
+        if ($insecure_unhashed_check_needed) {
+            return $this->insecurelyCheckKeysAgainstUnhashedUrls($key, $keys);
         }
         return $this->checkKeys($key, $keys, $url);
     }
@@ -262,6 +307,17 @@ class Config
         }
 
         return false;
+    }
+
+    private function insecurelyCheckKeysAgainstUnhashedUrls(
+        string $key_from_browser,
+        array $keys_from_config
+    ): bool {
+        foreach ($keys_from_config as $key_from_config) {
+            if ($key_from_browser === trim($key_from_config)) {
+                return true;
+            }
+        }
     }
 
     public function setOnScreenMessage(

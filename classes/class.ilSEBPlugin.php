@@ -73,9 +73,10 @@ class ilSEBPlugin extends ilUserInterfaceHookPlugin
     public const CHECK_KEY_COMMAND = 'checkKey';
 
     public const SEB_DATA_MODE = [
-        'header' => 0,
-        'cookie' => 1,
-        'none' => 2
+        'none' => 0,
+        'header' => 1,
+        'cookie' => 2,
+        'user_agent' => 3
     ];
 
     private static $forbidden = false;
