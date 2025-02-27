@@ -98,12 +98,12 @@ class ilSEBSettingsTabGUI extends ilSEBTabGUI
                         'seb_key_win' => $ff->text(
                             $this->pl->txt('key_windows'),
                             $this->pl->txt('key_windows_info')
-                        )->withMaxLength(Config::MAX_KEYS_LENGTH)
+                        )->withMaxLength(Config::MAX_CONFIG_VALUE_LENGTH)
                         ->withValue($keys['seb_key_win']),
                         'seb_key_macos' => $ff->text(
                             $this->pl->txt('key_macos'),
                             $this->pl->txt('key_macos_info')
-                        )->withMaxLength(Config::MAX_KEYS_LENGTH)
+                        )->withMaxLength(Config::MAX_CONFIG_VALUE_LENGTH)
                         ->withValue($keys['seb_key_macos']),
                     ],
                     $this->pl->txt('title_settings_form'),

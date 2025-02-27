@@ -28,8 +28,7 @@ namespace kergomard\SEB\Config;
 
 class Config
 {
-    public const MAX_KEYS_LENGTH = 2000;
-    public const MAX_URI_LENGTH = 1000;
+    public const MAX_CONFIG_VALUE_LENGTH = 2000;
     private const CMD_CLASSES_WITHOUT_SEB_KEY_TAB = [
         'ilsebsessionstabgui',
         'ilsebsettingstabgui',
@@ -198,14 +197,14 @@ class Config
                 return -1;
             }
 
-            if ($this->db->update(
+            if ($this->db->replace(
                 'ui_uihk_seb_conf',
                 [
-                        'value' => ['text', $value]
-                    ],
+                    'name' => ['text', $name]
+                ],
                 [
-                        'name' => ['text', $name]
-                    ]
+                    'value' => ['text', $value]
+                ]
             ) > 0) {
                 $r += 1;
             }

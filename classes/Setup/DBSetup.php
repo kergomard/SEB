@@ -93,5 +93,17 @@ class DBSetup implements \ilDatabaseUpdateSteps
         if (!$this->db->primaryExistsByFields('ui_uihk_seb_keys', ['ref_id'])) {
             $this->db->addPrimaryKey('ui_uihk_seb_keys', ['ref_id']);
         }
+        if (!$this->db->primaryExistsByFields('ui_uihk_seb_conf', ['name'])) {
+            $this->db->modifyTableColumn(
+                'ui_uihk_seb_conf',
+                'name',
+                [
+                    'type' => 'text',
+                    'length' => '400',
+                    'notnull' => true
+                ]
+            );
+            $this->db->addPrimaryKey('ui_uihk_seb_conf', ['name']);
+        }
     }
 }

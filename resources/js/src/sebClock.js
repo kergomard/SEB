@@ -21,33 +21,16 @@
  */
 
 /**
- * @type url
+ * @type Number
  */
-let checkSebKeyGuiURL;
+const updateInterval = 500;
 
 /**
- * @type {DOMDocument}
+ * @param {HTMLElement} clockElement
+ * @returns {void}
  */
-let document;
-
-function afterUpdateKey() {
-  document.cookie = `examKey=${SafeExamBrowser.security.browserExamKey}`;
-  document.cookie = `configKey=${SafeExamBrowser.security.configKey}`;
-  document.cookie = `sebClientVersion=${SafeExamBrowser.version}`;
-  sendRequest();
-}
-
-function sendRequest() {
-  fetch(checkSebKeyGuiURL, { credentials: 'same-origin' })
-    .then((response) => {
-      if (response.status === 403) {
-        document.open('text/html');
-        document.write(response.text());
-        document.close();
-      }
-
-      return response.text();
-    });
+function setTime(clockElement) {
+  clockElement.innerHTML = `${(new Date()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
 }
 
 /**
@@ -55,13 +38,7 @@ function sendRequest() {
  * @param {Function} setInterval
  * @returns {void}
  */
-export default function saveAndCheckSEBKey(url, documentParam) {
-  checkSebKeyGuiURL = url;
-  document = documentParam;
-
-  document.cookie = `uri=${document.defaultView.location.href}`;
-  if (typeof SafeExamBrowser !== 'undefined'
-    && SafeExamBrowser.security !== undefined) {
-    SafeExamBrowser.security.updateKeys(() => afterUpdateKey(document));
-  }
+export default function init(clockElement, setInterval) {
+  setTime(clockElement);
+  setInterval(() => { setTime(clockElement); }, updateInterval);
 }

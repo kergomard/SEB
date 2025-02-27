@@ -45,6 +45,8 @@ use ILIAS\UI\Component\MainControls\Slate\Combined as CombinedSlate;
 
 class ScreenModificationProvider extends AbstractModificationPluginProvider
 {
+    private ?bool $in_running_test = null;
+
     public function isInterestedInContexts(): ContextCollection
     {
         return $this->context_collection->main();
@@ -55,9 +57,13 @@ class ScreenModificationProvider extends AbstractModificationPluginProvider
     ): ?MainBarModification {
         return $this->dic->globalScreen()->layout()->factory()->mainbar()->withModification(
             function (MainBar $current = null): ?MainBar {
-                $empty_mainbar = $this->dic->ui()->factory()->mainControls()->mainBar();
                 $this->addCSS();
-                return $empty_mainbar;
+                if ($this->isTestRunning()) {
+                    $this->dic->globalScreen()->layout()->meta()->addOnloadCode(
+                        'il.seb.sebClockInit(document.querySelector("#kioskClock"))'
+                    );
+                }
+                return $this->dic->ui()->factory()->mainControls()->mainBar();
             }
         )->withHighPriority();
     }
@@ -104,9 +110,8 @@ class ScreenModificationProvider extends AbstractModificationPluginProvider
         CalledContexts $screen_context_stack
     ): ?TitleModification {
         return $this->dic->globalScreen()->layout()->factory()->title()->withModification(
-            function (String $current = null): string {
-                return $this->initializeHeaderBuilder()->getParsedTitleString();
-            }
+            fn (string $current = null): string => $this->initializeHeaderBuilder()
+                ->getParsedTitleString()
         )->withHighPriority();
     }
 
@@ -114,9 +119,7 @@ class ScreenModificationProvider extends AbstractModificationPluginProvider
         CalledContexts $screen_context_stack
     ): ?BreadCrumbsModification {
         return $this->dic->globalScreen()->layout()->factory()->breadcrumbs()->withModification(
-            function (Breadcrumbs $current = null): ?Breadcrumbs {
-                return null;
-            }
+            static fn (Breadcrumbs $current = null): ?Breadcrumbs => null
         )->withHighPriority();
     }
 
@@ -124,9 +127,7 @@ class ScreenModificationProvider extends AbstractModificationPluginProvider
         CalledContexts $screen_context_stack
     ): ?FooterModification {
         return $this->dic->globalScreen()->layout()->factory()->footer()->withModification(
-            function (Footer $current = null): ?Footer {
-                return null;
-            }
+            static fn (Footer $current = null): ?Footer => null
         )->withHighPriority();
     }
 
@@ -149,7 +150,16 @@ class ScreenModificationProvider extends AbstractModificationPluginProvider
 
     private function isTestRunning(): bool
     {
-        if ($this->dic->ctrl()->getContextObjType() != 'tst') {
+        if ($this->in_running_test === null) {
+            $this->in_running_test = $this->determineRunningTest();
+        }
+
+        return $this->in_running_test;
+    }
+
+    private function determineRunningTest(): bool
+    {
+        if ($this->dic->ctrl()->getContextObjType() !== 'tst') {
             return false;
         }
 
@@ -159,8 +169,8 @@ class ScreenModificationProvider extends AbstractModificationPluginProvider
             $this->dic->user()->getId()
         );
 
-        if ($test_session->getActiveId() === 0 ||
-            $test_session->getLastStartedPass() == $test_session->getLastFinishedPass()) {
+        if ($test_session->getActiveId() === 0
+            || (string) $test_session->getLastStartedPass() === (string ) $test_session->getLastFinishedPass()) {
             return false;
         }
 

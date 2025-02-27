@@ -26,9 +26,10 @@ declare(strict_types=1);
 
 use kergomard\SEB\Config\Config;
 
+use ILIAS\HTTP\Services as HTTPServices;
+use ILIAS\Refinery\Factory as Refinery;
 use ILIAS\UI\Factory as UIFactory;
 use ILIAS\UI\Renderer as UIRenderer;
-use ILIAS\HTTP\Services as HTTPServices;
 use ILIAS\UI\Component\Input\Container\Form\Form;
 
 /**
@@ -36,6 +37,7 @@ use ILIAS\UI\Component\Input\Container\Form\Form;
  */
 class ilSEBConfigGUI extends ilPluginConfigGUI
 {
+    private const VALID_COLOR_REGEXP = '/^(\#[\da-fA-F]{3}|\#[\da-fA-F]{6}|rgba\(((\d{1,2}|1\d\d|2([0-4]\d|5[0-5]))\s*,\s*){2}((\d{1,2}|1\d\d|2([0-4]\d|5[0-5]))\s*)(,\s*(0\.\d+|1))\)|hsla\(\s*((\d{1,2}|[1-2]\d{2}|3([0-5]\d|60)))\s*,\s*((\d{1,2}|100)\s*%)\s*,\s*((\d{1,2}|100)\s*%)(,\s*(0\.\d+|1))\)|rgb\(((\d{1,2}|1\d\d|2([0-4]\d|5[0-5]))\s*,\s*){2}((\d{1,2}|1\d\d|2([0-4]\d|5[0-5]))\s*)|hsl\(\s*((\d{1,2}|[1-2]\d{2}|3([0-5]\d|60)))\s*,\s*((\d{1,2}|100)\s*%)\s*,\s*((\d{1,2}|100)\s*%)\))$/';
     private const CMD_CONFIGURE = 'configure';
     private const CMD_SAVE = 'save';
 
@@ -44,6 +46,7 @@ class ilSEBConfigGUI extends ilPluginConfigGUI
     private ilGlobalTemplateInterface $tpl;
     private UIFactory $ui_factory;
     private UIRenderer $ui_renderer;
+    private Refinery $refinery;
     private ilLanguage $lang;
     private ilCtrl $ctrl;
     private ilRbacReview $rbac_review;
@@ -61,6 +64,7 @@ class ilSEBConfigGUI extends ilPluginConfigGUI
                 $this->tpl = $DIC['tpl'];
                 $this->ui_factory = $DIC['ui.factory'];
                 $this->ui_renderer = $DIC['ui.renderer'];
+                $this->refinery = $DIC['refinery'];
                 $this->lang = $DIC['lng'];
                 $this->ctrl = $DIC['ilCtrl'];
                 $this->rbac_review = $DIC['rbacreview'];
@@ -113,6 +117,11 @@ class ilSEBConfigGUI extends ilPluginConfigGUI
         $session_control_enabled = ilSecuritySettings::_getInstance()
             ->isPreventionOfSimultaneousLoginsEnabled();
 
+        $color_constraint = $this->refinery->custom()->constraint(
+            static fn (string $v): bool => preg_match(self::VALID_COLOR_REGEXP, $v)=== 1,
+            $this->pl->txt('invalid_color')
+        );
+
         return $this->ui_factory->input()->container()->form()->standard(
             $this->ctrl->getFormActionByClass(
                 [
@@ -131,7 +140,7 @@ class ilSEBConfigGUI extends ilPluginConfigGUI
                     'seb_keys' => $ff->text(
                         $this->pl->txt('seb_keys'),
                         $this->pl->txt('seb_keys_info')
-                    )->withMaxLength(Config::MAX_KEYS_LENGTH)
+                    )->withMaxLength(Config::MAX_CONFIG_VALUE_LENGTH)
                     ->withValue($this->config->getSEBKeysString()),
                     'role_deny' => $ff->select(
                         $this->pl->txt('role_deny'),
@@ -152,6 +161,18 @@ class ilSEBConfigGUI extends ilPluginConfigGUI
                             : $this->pl->txt('activate_session_control_info_disabled')
                     )->withValue($this->config->getActivateSessionControl())
                     ->withDisabled(!$session_control_enabled),
+                    'header_bg_color' => $ff->text(
+                        $this->pl->txt('header_bg_color'),
+                        $this->pl->txt('header_bg_color_info')
+                    )->withMaxLength(Config::MAX_CONFIG_VALUE_LENGTH)
+                    ->withAdditionalTransformation($color_constraint)
+                    ->withValue($this->config->getHeaderBackgroundColor()),
+                    'header_color' => $ff->text(
+                        $this->pl->txt('header_color'),
+                        $this->pl->txt('header_color_info')
+                    )->withMaxLength(Config::MAX_CONFIG_VALUE_LENGTH)
+                    ->withAdditionalTransformation($color_constraint)
+                    ->withValue($this->config->getHeaderColor()),
                     'show_pax_pic' => $ff->checkbox(
                         $this->pl->txt('show_pax_pic'),
                         $this->pl->txt('show_pax_pic_info')
@@ -167,7 +188,7 @@ class ilSEBConfigGUI extends ilPluginConfigGUI
                     'ilias_root_uri' => $ff->text(
                         $this->pl->txt('ilias_root_uri'),
                         $this->pl->txt('ilias_root_uri_info')
-                    )->withMaxLength(Config::MAX_URI_LENGTH)
+                    )->withMaxLength(Config::MAX_CONFIG_VALUE_LENGTH)
                     ->withValue($root_uri)
                 ],
                 $this->pl->txt('config')

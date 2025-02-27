@@ -30,10 +30,15 @@ p.ilStartupSection, .ilContentFixed button, .breadcrumbs, .nav.il-maincontrols,
 	color: initial;
 }
 
+#kioskExamID,
 #kioskParticipant {
 	width: 100%;
 	overflow: hidden;
 	text-overflow: ellipsis;
+}
+
+#kioskClock {
+	padding: 0 2em;
 }
 
 /* Adaptations Needed to Reduce Header Size */
