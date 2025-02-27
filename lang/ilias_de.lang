@@ -21,6 +21,10 @@ exam_id#:#Prüfungsnr.
 forbidden_header#:#Keine Berechtigung!
 forbidden_login#:#Bei ILIAS anmelden
 forbidden_message#:#Sie haben mit diesem Browser keine Berechtigung auf das System zuzugreifen. <br />Bitte kontaktieren Sie den Systemadministrator.
+header_bg_color#:#Hintergrundfarbe der Kopfzeile
+header_bg_color_info#:#Geben Sie einen gültigen Farbcode ein, um die Hintergrundfarbe der Kopfzeile zu ändern. Alle in CSS gültigen Codes werden akzeptiert.
+header_color#:#Inhaltsfarbe der Kopfzeile
+header_color_info#:#Geben Sie einen gültigen Farbcode ein, um die Inhaltsfarbe der Kopfzeile zu ändern. Alle in CSS gültigen Codes werden akzeptiert.
 key_macos#:#Keys für MacOS
 key_macos_info#:#Der Key ist im SEB Config Tool im Reiter 'Exams' zu finden. Achtung: Der Key ist funktioniert nur für die Version des SEB, mit welcher er generiert wurde! Es können mehrere durch Komma getrennte Schlüssel eingetragen werden.
 key_windows#:#Keys für Windows
@@ -38,7 +42,7 @@ role_none#:#Keine Rolle
 save_failure#:#Speichern fehlgeschlagen!
 save_success#:#Speichern erfolgreich
 seb_keys#:#SEB Keys
-seb_keys_info#:#Die komma-separierten Schlüssel für die SEB-Erkennung als Wert des o.g. Request-Header-Feldes. <br />WARNUNG! Sobald Sie einen oder mehrere Schlüssel eingeben und abspeichern und ohne Objekt-spezifische Keys zu erlauben, werden in der Standardeinstellung alle Nutzer außer Admins abgewiesen, wenn diese ohne einen abgesicherten Browser auf diese Plattform zugreifen! 
+seb_keys_info#:#Die komma-separierten Schlüssel für die SEB-Erkennung als Wert des o.g. Request-Header-Feldes. <br />WARNUNG! Sobald Sie einen oder mehrere Schlüssel eingeben und abspeichern und ohne Objekt-spezifische Keys zu erlauben, werden in der Standardeinstellung alle Nutzer außer Admins abgewiesen, wenn diese ohne einen abgesicherten Browser auf diese Plattform zugreifen!
 sessions_deleted#:#Die Session(s) wurden entfernt.
 sessions_tab_title#:#Benutzer-Sessions
 settings_tab_title#:#SEB Keys

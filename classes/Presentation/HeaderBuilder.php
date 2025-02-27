@@ -54,6 +54,8 @@ class HeaderBuilder
     {
         $template = new \ilTemplate('tpl.il_as_tst_kiosk_head.html', true, true, $this->plugin->getDirectory());
 
+        $template->setVariable('HEADER_BG_COLOR', $this->plugin->getHeaderBackgroundColor());
+        $template->setVariable('HEADER_COLOR', $this->plugin->getHeaderColor());
         if ($this->user->getId() > 0) {
             $template->setVariable('PARTICIPANT_NAME', $this->user->getFullname());
 

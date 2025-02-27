@@ -46,8 +46,13 @@ class Config
         'show_pax_pic',
         'show_pax_matriculation',
         'show_pax_username',
-        'ilias_root_uri'
+        'ilias_root_uri',
+        'header_bg_color',
+        'header_color'
     ];
+    private const DEFAULT_HEADER_BG_COLOR = '#6EA03C';
+    private const DEFAULT_HEADER_COLOR = '#FFF';
+
     private array $conf = [
         'seb_keys' => []
     ];
@@ -114,6 +119,16 @@ class Config
     public function getIliasRootUri(): string
     {
             return $this->conf['ilias_root_uri'] ?? '';
+    }
+
+    public function getHeaderBackgroundColor(): string
+    {
+            return $this->conf['header_bg_color'] ?? self::DEFAULT_HEADER_BG_COLOR;
+    }
+
+    public function getHeaderColor(): string
+    {
+            return $this->conf['header_color'] ?? self::DEFAULT_HEADER_COLOR;
     }
 
     /**

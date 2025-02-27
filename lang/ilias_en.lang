@@ -20,6 +20,10 @@ description_settings_form#:#Keys entered here are only valid for this object!
 forbidden_header#:#Access denied!
 forbidden_login#:#Login to ILIAS
 forbidden_message#:#You are not authorized to access the system with this browser.<br />Please contact your system administrator.
+header_bg_color#:#Header Background Color
+header_bg_color_info#:#You have to enter a correct color code (any format valid in CSS is accepted).
+header_color#:#Header Content Color
+header_color_info#:#You have to enter a correct color code (any format valid in CSS is accepted).
 key_macos#:#Keys for MacOS
 key_macos_info#:#You can find the key in the SEB Config Tool in the Tab 'Exams'. Be aware: The key does only work with the Version of SEB with which it was generated! Multiple keys can be entered separated by commas.
 key_windows#:#Keys for Windows

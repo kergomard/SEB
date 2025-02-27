@@ -196,6 +196,16 @@ class ilSEBPlugin extends ilUserInterfaceHookPlugin
         return $this->config->getShowPaxUsername();
     }
 
+    public function getHeaderBackgroundColor(): string
+    {
+        return $this->config->getHeaderBackgroundColor();
+    }
+
+    public function getHeaderColor(): string
+    {
+        return $this->config->getHeaderColor();
+    }
+
     public function handleEvent(
         string $a_component,
         string $a_event,

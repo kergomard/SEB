@@ -94,5 +94,4 @@ class DBSetup implements \ilDatabaseUpdateSteps
             $this->db->addPrimaryKey('ui_uihk_seb_keys', ['ref_id']);
         }
     }
-
 }

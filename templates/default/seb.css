@@ -6,11 +6,6 @@ p.ilStartupSection, .ilContentFixed button, .breadcrumbs, .nav.il-maincontrols,
 }
 
 /* Using a fixed MainHeader with an user image and some options in kioskmode a kioskOption header */
-.header-inner {
-	background-color: #6ea03c;
-	color: #fff;
-}
-
 .header-inner .glyphicon {
 	filter: initial;
 }
