@@ -1,8 +1,9 @@
 .il-logo  a:first-child {
 	align-self: flex-start;
 }
-.il-logo img {
-	height: 130px;
+.il-logo .img-standard {
+	max-height: 130px;
+	width: auto;
 	position: relative;
 	top: 35px;
 }
@@ -25,7 +26,7 @@ div.il_HeaderInner.media {
 		height: 120px;
 		width: 120px;
 	}
-	
+
 	.il-pagetitle {
 		padding-left: 0;
 	}

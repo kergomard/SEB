@@ -6,8 +6,8 @@ p.ilStartupSection, .ilContentFixed button, .breadcrumbs, .nav.il-maincontrols,
 }
 
 /* Using a fixed MainHeader with an user image and some options in kioskmode a kioskOption header */
-.header-inner, footer {
-	background-color: #003311;
+.header-inner {
+	background-color: #6ea03c;
 	color: #fff;
 }
 
@@ -28,11 +28,17 @@ p.ilStartupSection, .ilContentFixed button, .breadcrumbs, .nav.il-maincontrols,
 	display: flex;
 	justify-content: space-between;
 	white-space: nowrap;
-	color: #fff;
+	padding: 0 0.5em;
 }
 
 .il-metabar-slates {
 	color: initial;
+}
+
+#kioskParticipant {
+	width: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 
 /* Forbidden Message */

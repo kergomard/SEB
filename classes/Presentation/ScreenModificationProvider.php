@@ -125,14 +125,18 @@ class ScreenModificationProvider extends AbstractModificationPluginProvider
     ): ?FooterModification {
         return $this->dic->globalScreen()->layout()->factory()->footer()->withModification(
             function (Footer $current = null): ?Footer {
-                return $this->dic->ui()->factory()->mainControls()->footer([], '');
+                return null;
             }
         )->withHighPriority();
     }
 
     private function initializeHeaderBuilder(): HeaderBuilder
     {
-        $title_object = new HeaderBuilder($this->plugin, $this->dic->user());
+        $title_object = new HeaderBuilder(
+            $this->plugin,
+            $this->dic->user(),
+            $this->dic->settings()->get('short_inst_name')
+        );
         if ($this->plugin->getCurrentRefId() === null
             || $this->plugin->getCurrentRefId() === 0) {
             return $title_object;

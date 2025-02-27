@@ -31,11 +31,16 @@ class HeaderBuilder
     private \ilSEBPlugin $plugin;
     private \ilObjUser $user;
     private ?\ilObject $object = null;
+    private string $short_inst_name;
 
-    public function __construct(\ilSEBPlugin $plugin, \ilObjUser $user)
-    {
+    public function __construct(
+        \ilSEBPlugin $plugin,
+        \ilObjUser $user,
+        string $short_inst_name
+    ) {
         $this->plugin = $plugin;
         $this->user = $user;
+        $this->short_inst_name = $short_inst_name;
     }
 
     public function withObject(\ilObject $object): self
@@ -64,9 +69,9 @@ class HeaderBuilder
 
             $additional_info = '';
             if (!is_null($username) && !is_null($matriculation)) {
-                $additional_info = "({$username} - {$matriculation})";
+                $additional_info = "({$username}, {$matriculation})";
             } elseif (!is_null($username) || !is_null($matriculation)) {
-                $additional_info = '(' . $username ?? $matriculation . ')';
+                $additional_info = '(' . ($username ?? $matriculation) . ')';
             }
             $template->setVariable('ADDITIONAL_INFO', $additional_info);
         }
@@ -75,9 +80,15 @@ class HeaderBuilder
             return $template->get();
         }
 
+        $template->setVariable(
+            'TITLE',
+            $this->object->getType() === 'tst'
+            ? $this->object->getTitle()
+            : $this->short_inst_name
+        );
+
         if ($this->object->getType() === 'tst'
             && $this->object->isShowExamIdInTestPassEnabled()) {
-            $template->setVariable('EXAM_ID_TXT', "{$this->plugin->txt('exam_id')}: ");
             $testSession = new ilTestSession();
             $testSession->loadTestSession(
                 $this->object->getTestId(),
@@ -88,7 +99,7 @@ class HeaderBuilder
                 $testSession->getPass(),
                 $this->plugin->getCurrentRefId()
             );
-            $template->setVariable('EXAM_ID', $exam_id);
+            $template->setVariable('EXAM_ID', "({$this->plugin->txt('exam_id')}: {$exam_id})");
         }
 
         return $template->get();
