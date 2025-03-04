@@ -60,6 +60,9 @@ class ilSEBPlugin extends ilUserInterfaceHookPlugin
                 'savePersonalData',
                 'savePublicProfile'
             ],
+            'ilpersonalsettingsgui' => [
+                'showPassword'
+            ],
             'ilstartupgui' => [
                 'getAcceptance',
                 'confirmAcceptance'

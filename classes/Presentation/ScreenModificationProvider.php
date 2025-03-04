@@ -136,7 +136,7 @@ class ScreenModificationProvider extends AbstractModificationPluginProvider
         $title_object = new HeaderBuilder(
             $this->plugin,
             $this->dic->user(),
-            $this->dic->settings()->get('short_inst_name')
+            $this->dic->settings()->get('short_inst_name', '')
         );
         if ($this->plugin->getCurrentRefId() === null
             || $this->plugin->getCurrentRefId() === 0) {
