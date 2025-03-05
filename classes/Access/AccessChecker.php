@@ -26,27 +26,33 @@ declare(strict_types=1);
 
 namespace kergomard\SEB\Access;
 
-use kergomard\SEB\Config\Config;
+use kergomard\SEB\Config\Configuration;
 
 use ILIAS\Filesystem\Stream\Streams;
 use ILIAS\HTTP\Services as HTTPServices;
 use ILIAS\Refinery\Factory as Refinery;
 
-class Checker
+class AccessChecker
 {
+    private const CMDS_WITHOUT_URI_UPDATE = [
+        'autosave',
+        'checkKey',
+        'getOSDNotifications'
+    ];
+    private KeysChecker $keys_checker;
     private \ilCtrl $ctrl;
     private \ilObjUser $user;
     private \ilAuthSession $auth;
     private \ilRbacReview $rbacreview;
     private Refinery $refinery;
     private HTTPServices $http;
-    private Config $config;
-    private array $data;
+    private Configuration $config;
+    private ?Data $data = null;
     private ?int $ref_id = null;
-    private int $mode = \ilSEBPlugin::SEB_DATA_MODE['none'];
 
-    private bool $current_user_allowed;
-    private bool $switch_to_seb_skin_needed;
+    private bool $current_user_allowed = true;
+    private bool $switch_to_seb_skin_needed = false;
+    private bool $key_check_possible_or_unavoidable = false;
 
     public function isCurrentUserAllowed(): bool
     {
@@ -60,14 +66,16 @@ class Checker
 
     public function __construct(
         ?int $ref_id,
+        KeysChecker $keys_checker,
         \ilCtrl $ctrl,
         \ilObjUser $user,
         \ilAuthSession $auth,
         \ilRbacReview $rbacreview,
         Refinery $refinery,
         HTTPServices $http,
-        Config $conf
+        Configuration $conf
     ) {
+        $this->keys_checker = $keys_checker;
         $this->ctrl = $ctrl;
         $this->user = $user;
         $this->auth = $auth;
@@ -76,27 +84,36 @@ class Checker
         $this->http = $http;
         $this->config = $conf;
 
-        $this->mode = $this->sebKeyInHeaderPostCookieOrNone();
-        $this->data = $this->retrieveSEBData($this->mode);
+        if (!$this->user->getId()
+            || $this->user->getId() === ANONYMOUS_USER_ID
+            || $this->rbacreview->isAssigned($this->user->getId(), SYSTEM_ROLE_ID)) {
+            return;
+        }
+
+        $cookie_key = $this->http->wrapper()->cookie()->retrieve(
+            'examKey',
+            $this->refinery->byTrying([
+                $this->refinery->kindlyTo()->string(),
+                $this->refinery->always('')
+            ])
+        );
+
+        $this->data = $this->retrieveSEBData(
+            $this->sebKeyInHeaderPostCookieOrNone(),
+            $cookie_key
+        );
         $this->ref_id = $ref_id;
 
-        $is_logged_in = $this->user->getId() && $this->user->getId() !== ANONYMOUS_USER_ID;
-        $is_root = $this->rbacreview->isAssigned($this->user->getId(), SYSTEM_ROLE_ID);
-        $this->switch_to_seb_skin_needed = $this->detectSwitchToSEBSkinNeeded($is_logged_in, $is_root);
-        $this->current_user_allowed = $this->detectCurrentUserAllowed($is_logged_in, $is_root);
+        $this->switch_to_seb_skin_needed = $this->detectSwitchToSEBSkinNeeded();
+        $this->current_user_allowed = $this->detectCurrentUserAllowed();
+        $this->key_check_possible_or_unavoidable = $this->detectKeyCheckPossibleOrForced();
 
-        \ilSession::set('last_uri', $this->retrieveFullUri());
+        $this->updateControlURIInSession();
     }
 
     public function isKeyCheckPossibleOrUnavoidable(): bool
     {
-        if ($this->mode === \ilSEBPlugin::SEB_DATA_MODE['none']
-            && $this->data['uri'] === ''
-            && $this->data['last_uri'] !== '') {
-            return false;
-        }
-
-        return true;
+        return $this->key_check_possible_or_unavoidable;
     }
 
     public function exitIlias(\ilSEBPlugin $pl): void
@@ -151,8 +168,7 @@ class Checker
         if ($this->http->request()->hasHeader(\ilSEBPlugin::REQ_HEADER)) {
             return \ilSEBPlugin::SEB_DATA_MODE['header'];
         }
-        if ($this->http->cookieJar()->has('examKey')
-            && $this->http->cookieJar()->has('uri')) {
+        if ($this->http->wrapper()->cookie()->has('examKey')) {
             return \ilSEBPlugin::SEB_DATA_MODE['cookie'];
         }
         if ($this->config->isInsecureUserAgentKeyEnabled()
@@ -165,132 +181,118 @@ class Checker
 
     private function isInsecureUnhashedMode(): bool
     {
-        return $this->mode === \ilSEBPlugin::SEB_DATA_MODE['user_agent'];
+        return $this->data->getMode() === \ilSEBPlugin::SEB_DATA_MODE['user_agent'];
     }
 
-    private function detectCurrentUserAllowed(
-        bool $is_logged_in,
-        bool $is_root
-    ): bool {
+    private function detectCurrentUserAllowed(): bool {
         $role_deny = $this->config->getRoleDeny();
-        $allow_without_seb = true;
-
-        if ($is_logged_in && $role_deny > 0 && !$is_root) {
-            $allow_without_seb = $role_deny !== 1
-                && !$this->rbacreview->isAssigned($this->user->getId(), $role_deny);
-        }
-
-        if ($allow_without_seb
+        if ($role_deny === 0
+            || $role_deny !== 1 && !$this->rbacreview->isAssigned($this->user->getId(), $role_deny)
             || $this->detectSeb($this->ref_id) >= \ilSEBPlugin::SEB_REQUEST_TYPES['seb_request']
             || $this->anySEBKeyIsEnough() && $this->detectSeb()) {
             return true;
         }
-
         return false;
     }
 
     private function anySEBKeyIsEnough(): bool
     {
         $cmd = $this->ctrl->getCmd();
-        $cmdclass = $this->ctrl->getCmdClass();
-        $path = $this->http->request()->getUri()->getPath();
-
-        if (in_array(\ilContext::getType(), \ilSEBPlugin::REQUESTS_THAT_DONT_NEED_OBJECT_SPECIFIC_KEYS['context_check'])
-            || in_array($cmd, \ilSEBPlugin::REQUESTS_THAT_DONT_NEED_OBJECT_SPECIFIC_KEYS['cmd_check'])
-            || array_key_exists($cmdclass, \ilSEBPlugin::REQUESTS_THAT_DONT_NEED_OBJECT_SPECIFIC_KEYS['cmd_and_cmdclass_check'])
-                && in_array($cmd, \ilSEBPlugin::REQUESTS_THAT_DONT_NEED_OBJECT_SPECIFIC_KEYS['cmd_and_cmdclass_check'][$cmdclass])) {
+        if ($this->config->doesContextAllowAnyObjectKey(\ilContext::getType())
+            || $this->config->doesCommandAllowAnyObjectKey($cmd)
+            || $this->config->doClassAndCommandAllowAnyObjectKey($this->ctrl->getCmdClass(), $cmd)) {
             return true;
         }
 
-        foreach (\ilSEBPlugin::REQUESTS_THAT_DONT_NEED_OBJECT_SPECIFIC_KEYS['path_check'] as $exempted_path) {
-            if (mb_strpos($path, $exempted_path)) {
-                return true;
-            }
-        }
-
-        return false;
+        return $this->config->doesPathAllowAnyObjectKey(
+            $this->http->request()->getUri()->getPath()
+        );
     }
 
-    private function detectSwitchToSEBSkinNeeded(
-        bool $is_logged_in,
-        bool $is_root
-    ): bool {
-        $is_kiosk_user = (
-            $this->config->getRoleKiosk() === 1
-            || $this->rbacreview->isAssigned($this->user->getId(), $this->config->getRoleKiosk())
-        ) && !$is_root;
-
-        if ($is_logged_in && $is_kiosk_user) {
-            return true;
+    private function detectSwitchToSEBSkinNeeded(): bool {
+        $role_kiosk = $this->config->getRoleKiosk();
+        if ($role_kiosk === 0
+            || $role_kiosk !== 1 && !$this->rbacreview->isAssigned($this->user->getId(), $role_kiosk)) {
+            return false;
         }
+        return true;
+    }
 
-        return false;
+    private function detectKeyCheckPossibleOrForced(): bool
+    {
+        $check_forced = \ilSession::get('check_forced') ?? 0;
+        if ($this->data->getMode() === \ilSEBPlugin::SEB_DATA_MODE['cookie']
+            && ($this->data->getExamKey() === '' || $check_forced === 0)) {
+            \ilSession::set('check_forced', ++$check_forced);
+            return false;
+        }
+        \ilSession::clear('check_forced');
+        return true;
     }
 
     private function detectSeb(?int $ref_id = null): int
     {
-        $exam_key = $this->data['exam_key'];
-
+        \ilSession::clear('url_to_check');
+        $exam_key = $this->data->getExamKey();
         if ($exam_key === '') {
+            \ilSession::set('cookie_ui', $this->retrieveFullUri());
             return \ilSebPlugin::SEB_REQUEST_TYPES['not_a_seb_request'];
         }
 
-        if ($this->config->checkSebKey(
+        $uri = $this->data->getMode() === \ilSEBPlugin::SEB_DATA_MODE['cookie']
+                ? $this->data->getCookieUri()
+                : $this->data->getRequestUri();
+
+        if ($this->keys_checker->checkGlobalKey(
                 $exam_key,
-                $this->data['uri'],
+                $uri,
                 $this->isInsecureUnhashedMode()
             )) {
             return \ilSebPlugin::SEB_REQUEST_TYPES['seb_request'];
         }
-        if ($this->config->checkObjectKey(
+        if ($this->keys_checker->checkObjectKey(
                 $exam_key,
-                $this->data['uri'],
+                $uri,
                 $ref_id,
                 $this->isInsecureUnhashedMode()
             )) {
             return \ilSebPlugin::SEB_REQUEST_TYPES['seb_request_object_keys'];
         }
-
-        if (!$ref_id && $this->config->checkKeyAgainstAllObjectKeys(
+        if (!$ref_id && $this->keys_checker->checkKeyAgainstAllObjectKeys(
                 $exam_key,
-                $this->data['uri'],
+                $uri,
                 $this->isInsecureUnhashedMode()
             )) {
             return \ilSebPlugin::SEB_REQUEST_TYPES['seb_request_object_keys_unspecific'];
         }
-
         return \ilSebPlugin::SEB_REQUEST_TYPES['seb_request_invalid'];
     }
 
-    private function retrieveSEBData(int $mode): array
+    private function retrieveSEBData(int $mode, string $cookie_key): Data
     {
-        $data = [
-            'uri' => $this->retrieveFullUri(),
-            'last_uri' => \ilSession::get('last_uri')
-        ];
+        $data = new Data(
+            $mode,
+            $this->retrieveFullUri(),
+            \ilSession::get('cookie_uri')
+        );
 
         switch ($mode) {
             case \ilSEBPlugin::SEB_DATA_MODE['header']:
-                $data['exam_key'] = $this->http->request()->getHeader(\ilSEBPlugin::REQ_HEADER)[0];
-                break;
+                return $data->withExamKey(
+                    $this->http->request()->getHeader(\ilSEBPlugin::REQ_HEADER)[0]
+                );
             case \ilSEBPlugin::SEB_DATA_MODE['cookie']:
-                $data['exam_key'] = $this->http->cookieJar()->get('examKey');
-                break;
+                return $data->withExamKey($cookie_key);
             case \ilSEBPlugin::SEB_DATA_MODE['user_agent']:
                 preg_match(
                     '/SEBKEY=([a-zA-Z0-9_]+)/',
                     $this->http->request()->getHeader('User-Agent')[0],
                     $matches
                 );
-                $data['exam_key'] = trim($matches[1]);
-                $data['uri'] = $this->retrieveFullUri();
-                break;
+                return $data->withExamKey(trim($matches[1]));
             default:
-                $data['exam_key'] = '';
-                break;
+                return $data;
         }
-
-        return $data;
     }
 
     private function retrieveFullUri(): string
@@ -314,5 +316,13 @@ class Checker
         }
 
         return $protocol . "://" . $host . $port . $path . $query;
+    }
+
+    private function updateControlURIInSession(): void
+    {
+        if (!in_array($this->ctrl->getCmd(''), self::CMDS_WITHOUT_URI_UPDATE)
+            && stristr($this->http->request()->getUri()->getPath(), 'goto.php') === false) {
+            \ilSession::set('cookie_uri', $this->retrieveFullUri());
+        }
     }
 }

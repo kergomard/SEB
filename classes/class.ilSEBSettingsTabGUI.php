@@ -24,9 +24,7 @@
 
 declare(strict_types=1);
 
-use kergomard\SEB\Config\Config;
-
-use ILIAS\UI\Component\Input\Container\Form\Form;
+use ILIAS\UI\Component\Input\Container\Form\Standard as StandardForm;
 
 /**
  * @ilCtrl_isCalledBy ilSEBSettingsTabGUI: ilRouterGUI, ilUIPluginRouterGUI
@@ -57,7 +55,7 @@ class ilSEBSettingsTabGUI extends ilSEBTabGUI
 
         $this->tpl->setContent(
             $this->ui_renderer->render(
-                $this->initConfigurationForm()
+                $this->buildObjectKeysForm()
             )
         );
         $this->tpl->printToStdout();
@@ -65,7 +63,7 @@ class ilSEBSettingsTabGUI extends ilSEBTabGUI
 
     private function save(): void
     {
-        $form = $this->initConfigurationForm()
+        $form = $this->buildObjectKeysForm()
             ->withRequest($this->http->request());
 
         $data = $form->getData();
@@ -74,42 +72,20 @@ class ilSEBSettingsTabGUI extends ilSEBTabGUI
             $this->tpl->printToStdOut();
         }
 
-        $this->config->setOnScreenMessage(
-            $this->tpl,
-            $this->pl,
-            $this->config->saveObjectKeys(
-                $this->ref_id,
-                $data['container']['seb_key_win'],
-                $data['container']['seb_key_macos']
-            )
+        $this->pl->getConfigurationRepository()->saveObjectKeys(
+            $data['container']
         );
+        $this->tpl->setOnScreenMessage('success', $this->pl->txt('save_success'));
         $this->showSettings();
     }
 
-    private function initConfigurationForm(): Form
+    private function buildObjectKeysForm(): StandardForm
     {
-        $ff = $this->ui_factory->input()->field();
-        $keys = $this->config->getObjectKeys($this->ref_id);
         return $this->ui_factory->input()->container()->form()->standard(
-            $this->ctrl->getFormActionByClass('ilSEBSettingsTabGUI', 'save'),
-            [
-                'container' => $ff->section(
-                    [
-                        'seb_key_win' => $ff->text(
-                            $this->pl->txt('key_windows'),
-                            $this->pl->txt('key_windows_info')
-                        )->withMaxLength(Config::MAX_CONFIG_VALUE_LENGTH)
-                        ->withValue($keys['seb_key_win']),
-                        'seb_key_macos' => $ff->text(
-                            $this->pl->txt('key_macos'),
-                            $this->pl->txt('key_macos_info')
-                        )->withMaxLength(Config::MAX_CONFIG_VALUE_LENGTH)
-                        ->withValue($keys['seb_key_macos']),
-                    ],
-                    $this->pl->txt('title_settings_form'),
-                    $this->pl->txt('description_settings_form')
-                )
-            ]
+            $this->ctrl->getFormActionByClass(self::class, 'save'),
+            $this->pl->getConfigurationRepository()
+                ->getObjectSpecificKeysFor($this->ref_id)
+                ->toForm($this->ui_factory, $this->refinery, $this->pl)
         );
     }
 }

@@ -24,7 +24,7 @@
 
 declare(strict_types=1);
 
-use kergomard\SEB\Config\Config;
+use kergomard\SEB\Config\Configuration;
 
 use ILIAS\Refinery\Factory as Refinery;
 use ILIAS\HTTP\Services as HTTPServices;
@@ -51,7 +51,7 @@ abstract class ilSEBTabGUI
     protected int $ref_id;
     protected ilObject $object;
     protected ilSEBPlugin $pl;
-    protected Config $config;
+    protected Configuration $configuration;
 
     public function __construct()
     {
@@ -93,7 +93,6 @@ abstract class ilSEBTabGUI
             $DIC['component.repository'],
             'seb'
         );
-        $this->config = new Config($this->db);
 
         $this->ctrl->setParameter($this, 'ref_id', $this->ref_id);
     }

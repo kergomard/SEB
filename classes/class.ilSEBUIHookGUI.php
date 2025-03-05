@@ -24,13 +24,14 @@
 
 declare(strict_types=1);
 
-use kergomard\SEB\Config\Config;
+use kergomard\SEB\Config\Configuration;
 
 class ilSEBUIHookGUI extends ilUIHookPluginGUI
 {
-    private Config $config;
     private ilSecuritySettings $security;
+    private ilRbacSystem $rbac_system;
     private ilCtrl $ctrl;
+    private ?int $current_user_id = null;
     private ?int $ref_id = null;
     private ?string $obj_type = null;
     private bool $has_write_access = false;
@@ -41,7 +42,6 @@ class ilSEBUIHookGUI extends ilUIHookPluginGUI
     {
         /** @var ILIAS\DI\Container $DIC */
         global $DIC;
-        $this->config = new Config($DIC['ilDB']);
         $this->ctrl = $DIC['ilCtrl'];
         $this->ref_id = $DIC['http']->wrapper()->query()->retrieve(
             'ref_id',
@@ -50,12 +50,8 @@ class ilSEBUIHookGUI extends ilUIHookPluginGUI
                 $DIC['refinery']->always(null)
             ])
         );
-        if ($this->ref_id !== null) {
-            $this->init(
-                $DIC['rbacsystem'],
-                $DIC['ilUser']->getId()
-            );
-        }
+        $this->rbac_system = $DIC['rbacsystem'];
+        $this->current_user_id = $DIC['ilUser']->getId();
     }
 
     public function modifyGUI(
@@ -63,25 +59,34 @@ class ilSEBUIHookGUI extends ilUIHookPluginGUI
         string $a_part,
         array $a_par = []
     ): void {
-        if ($a_part !== 'tabs' || $this->ref_id === null) {
+        if ($a_part !== 'tabs') {
             return;
         }
 
+        if (!\ilSession::has('checked')) {
+            \ilSession::set('checked', '0');
+        }
+
+        if ($this->ref_id === null) {
+            return;
+        }
+
+        $this->init();
+
         if ($this->obj_type === 'tst'
             && $this->has_write_access
-            && $this->cmd !== 'showquestion'
-            && $this->cmd !== 'outuserresultsoverview') {
-            if (in_array($this->cmd_class, $this->config->getCmdClassesWithoutSebKeyTab())
-                || $this->cmd_class === 'iltestcorrectionsgui' && $this->cmd !== 'showquestionlist'
-                || $this->cmd_class === 'ilparticipantstestresultsgui' && $this->cmd !== 'showparticipants'
-                || $this->cmd === 'editquestion'
-                || $this->cmd_class === 'ilassquestionrelatednavigationbargui') {
-                return;
-            }
+            && !in_array(
+                $this->cmd,
+                $this->plugin_object->getConfiguration()->getCmdsWithoutSebKeyTab()
+            ) && !in_array(
+                $this->cmd_class,
+                $this->plugin_object->getConfiguration()->getCmdClassesWithoutSebKeyTab()
+            )) {
+
             /*
              * Add Sessioncontrol Tab for SEB
              **/
-            if ($this->config->getActivateSessionControl()
+            if ($this->plugin_object->getConfiguration()->getSessionControlEnabled()
                 && $this->security->isPreventionOfSimultaneousLoginsEnabled()) {
                 $this->ctrl->setParameterByClass(ilSEBSessionsTabGUI::class, 'ref_id', $this->ref_id);
                 $link = $this->ctrl->getLinkTargetByClass([
@@ -98,7 +103,7 @@ class ilSEBUIHookGUI extends ilUIHookPluginGUI
             /*
              * Add Settings Tab for SEB
              **/
-            if ($this->config->getAllowObjectKeys()) {
+            if ($this->plugin_object->getConfiguration()->getObjectKeysEnabled()) {
                 $this->ctrl->setParameterByClass(ilSEBSettingsTabGUI::class, 'ref_id', $this->ref_id);
                 $link = $this->ctrl->getLinkTargetByClass([
                     ilSEBPlugin::STANDARD_BASE_CLASS,
@@ -113,20 +118,17 @@ class ilSEBUIHookGUI extends ilUIHookPluginGUI
         }
     }
 
-    private function init(
-        ilRbacSystem $rbac_system,
-        int $current_user_id
-    ): void
+    private function init(): void
     {
-        if ($this->config->getActivateSessionControl()) {
+        if ($this->plugin_object->getConfiguration()->getSessionControlEnabled()) {
             $this->security = ilSecuritySettings::_getInstance();
         }
 
         $this->obj_type = ilObject::_lookupType(
             ilObject::_lookupObjectId($this->ref_id)
         );
-        $this->has_write_access = $rbac_system->checkAccessOfUser(
-            $current_user_id,
+        $this->has_write_access = $this->rbac_system->checkAccessOfUser(
+            $this->current_user_id,
             'write',
             $this->ref_id
         );

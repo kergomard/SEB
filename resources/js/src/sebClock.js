@@ -29,7 +29,8 @@ const updateInterval = 500;
  * @param {HTMLElement} clockElement
  * @returns {void}
  */
-function setTime(clockElement) {
+function setTime(clockElementParam) {
+  const clockElement = clockElementParam;
   clockElement.innerHTML = `${(new Date()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
 }
 

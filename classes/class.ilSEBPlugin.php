@@ -24,9 +24,11 @@
 
 declare(strict_types=1);
 
-use kergomard\SEB\Access\Checker;
-use kergomard\SEB\Config\Config;
-use kergomard\SEB\Presentation\ScreenModificationProvider;
+use kergomard\SEB\Access\AccessChecker;
+use kergomard\SEB\Access\KeysChecker;
+use kergomard\SEB\Config\Configuration;
+use kergomard\SEB\Config\Repository;
+use kergomard\SEB\Presentation\SEBModificationProvider;
 
 use ILIAS\HTTP\Wrapper\ArrayBasedRequestWrapper;
 use ILIAS\Refinery\Factory as Refinery;
@@ -39,35 +41,6 @@ class ilSEBPlugin extends ilUserInterfaceHookPlugin
         'seb_request_object_keys_unspecific' => 1,
         'seb_request' => 2,
         'seb_request_object_keys' => 3
-    ];
-
-    public const REQUESTS_THAT_DONT_NEED_OBJECT_SPECIFIC_KEYS = [
-        'context_check' => [
-            ilContext::CONTEXT_WAC
-        ],
-        'path_check' => [
-            'logout.php',
-            '/src/GlobalScreen/Client/notify.php'
-        ],
-        'cmd_check' => [
-            'getOSDNotifications',
-            'removeOSDNotifications'
-        ],
-        'cmd_and_cmdclass_check' => [
-            'ilpersonalprofilegui' => [
-                'showPersonalData',
-                'showPublicProfile',
-                'savePersonalData',
-                'savePublicProfile'
-            ],
-            'ilpersonalsettingsgui' => [
-                'showPassword'
-            ],
-            'ilstartupgui' => [
-                'getAcceptance',
-                'confirmAcceptance'
-            ]
-        ]
     ];
 
     public const REQ_HEADER = 'X-Safeexambrowser-Requesthash';
@@ -85,7 +58,9 @@ class ilSEBPlugin extends ilUserInterfaceHookPlugin
     private static $forbidden = false;
     private static $kioskmode_checked = false;
 
-    private Config $config;
+    private bool $enable_seb_skin = false;
+    private Repository $configuration_repository;
+    private Configuration $configuration;
 
     private ?int $current_ref_id = null;
 
@@ -108,7 +83,7 @@ class ilSEBPlugin extends ilUserInterfaceHookPlugin
 
         $user = $DIC['ilUser'];
         $auth = $DIC['ilAuthSession'];
-        $rbac_review = $DIC['rbacreview'];
+        $rbacreview = $DIC['rbacreview'];
         $refinery = $DIC['refinery'];
         $http = $DIC['http'];
         $database = $DIC['ilDB'];
@@ -126,17 +101,19 @@ class ilSEBPlugin extends ilUserInterfaceHookPlugin
             $http->wrapper()->query(),
             $refinery
         );
-        $this->config = new Config($database);
+        $this->configuration_repository = new Repository($database, $http);
+        $this->configuration = $this->configuration_repository->getGlobalConfiguration();
 
-        $access_checker = new Checker(
+        $access_checker = new AccessChecker(
             $this->current_ref_id,
+            new KeysChecker($this->configuration, $this->configuration_repository),
             $ctrl,
             $user,
             $auth,
-            $rbac_review,
+            $rbacreview,
             $refinery,
             $http,
-            $this->config
+            $this->configuration
         );
 
         if ($access_checker->isKeyCheckPossibleOrUnavoidable() && !$access_checker->isCurrentUserAllowed()) {
@@ -148,36 +125,65 @@ class ilSEBPlugin extends ilUserInterfaceHookPlugin
             $access_checker->exitIlias($this);
         }
 
+        $obj_type = null;
+        if ($this->current_ref_id  !== null) {
+            $obj_type = ilObject::_lookupType($this->current_ref_id, true);
+        }
+
         /*
          * We need to switch the kioskmode off in tests to avoid collitions in certain modification providers
          * for the GlobalScreen. We need to check this here, because there simply is no other place.
          */
         if (!self::$kioskmode_checked
             && $access_checker->isSwitchToSebSkinNeeded()
-            && $this->current_ref_id !== null
-            && ilObject::_lookupType($this->current_ref_id, true) === 'tst'
+            && $obj_type === 'tst'
         ) {
             $this->disableKioskMode();
         }
 
         $layout_meta->addJs($this->getDirectory() . '/resources/js/dist/seb.js', true);
         $ctrl->setParameterByClass(ilUIPluginRouterGUI::class, 'ref_id', $this->current_ref_id);
-        $layout_meta->addOnloadCode(
-            "il.seb.saveAndCheckSEBKey('{$ctrl->getLinkTargetByClass(self::SEB_CHECK_KEY_GUI_DEFINITION, self::CHECK_KEY_COMMAND)}');"
+
+        $this->provider_collection->setModificationProvider(
+            new SEBModificationProvider($DIC, $this)
         );
 
         if ($access_checker->isSwitchToSebSkinNeeded()
             && (self::$kioskmode_checked
                 || $this->current_ref_id === null
-                || ilObject::_lookupType($this->current_ref_id, true) !== 'tst')) {
-            $this->provider_collection
-                ->setModificationProvider(new ScreenModificationProvider($DIC, $this));
+                || $obj_type !== 'tst')) {
+            $this->enable_seb_skin = true;
+        }
+
+        if (!$user->getId()
+            || $user->getId() === ANONYMOUS_USER_ID
+            || $rbacreview->isAssigned($user->getId(), SYSTEM_ROLE_ID)
+            || !$access_checker->isCurrentUserAllowed()) {
+            $ctrl->setParameterByClass(ilUIPluginRouterGUI::class, 'ref_id', $this->current_ref_id);
+            $layout_meta->addOnloadCode(
+                "il.seb.saveAndCheckSEBKey('{$ctrl->getLinkTargetByClass(self::SEB_CHECK_KEY_GUI_DEFINITION, self::CHECK_KEY_COMMAND)}');"
+            );
         }
     }
 
     public function getPluginName(): string
     {
         return 'SEB';
+    }
+
+    public function getConfigurationRepository(): Repository
+    {
+        return $this->configuration_repository;
+    }
+
+    public function getConfiguration(): Configuration
+    {
+        return $this->configuration;
+    }
+
+    public function reloadConfiguration(): void
+    {
+        $this->configuration = $this->configuration_repository->getGlobalConfiguration();
     }
 
     public function getCurrentRefId(): ?int
@@ -187,27 +193,32 @@ class ilSEBPlugin extends ilUserInterfaceHookPlugin
 
     public function isShowParticipantPicture(): bool
     {
-        return $this->config->getShowPaxPic();
+        return $this->configuration->getShowPaxPic();
     }
 
     public function isShowParticipantMatriculation(): bool
     {
-        return $this->config->getShowPaxMatriculation();
+        return $this->configuration->getShowPaxMatriculation();
     }
 
     public function isShowParticipantUsername(): bool
     {
-        return $this->config->getShowPaxUsername();
+        return $this->configuration->getShowPaxUsername();
     }
 
     public function getHeaderBackgroundColor(): string
     {
-        return $this->config->getHeaderBackgroundColor();
+        return $this->configuration->getHeaderBackgroundColor();
     }
 
     public function getHeaderColor(): string
     {
-        return $this->config->getHeaderColor();
+        return $this->configuration->getHeaderColor();
+    }
+
+    public function getEnableSEBSkin(): bool
+    {
+        return $this->enable_seb_skin;
     }
 
     public function handleEvent(

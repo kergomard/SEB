@@ -26,25 +26,41 @@ declare(strict_types=1);
 
 namespace kergomard\SEB\Presentation;
 
+use ILIAS\GlobalScreen\Scope\Layout\Builder\StandardPageBuilder;
 use ILIAS\GlobalScreen\Scope\Layout\Factory\BreadCrumbsModification;
 use ILIAS\GlobalScreen\Scope\Layout\Factory\FooterModification;
 use ILIAS\GlobalScreen\Scope\Layout\Factory\LogoModification;
 use ILIAS\GlobalScreen\Scope\Layout\Factory\MainBarModification;
 use ILIAS\GlobalScreen\Scope\Layout\Factory\MetaBarModification;
 use ILIAS\GlobalScreen\Scope\Layout\Factory\TitleModification;
+use ILIAS\GlobalScreen\Scope\Layout\Factory\PageBuilderModification;
 use ILIAS\GlobalScreen\Scope\Layout\Provider\AbstractModificationPluginProvider;
+use ILIAS\GlobalScreen\Scope\Layout\Provider\PagePart\PagePartProvider;
 use ILIAS\GlobalScreen\ScreenContext\Stack\CalledContexts;
 use ILIAS\GlobalScreen\ScreenContext\Stack\ContextCollection;
 use ILIAS\UI\Component\Breadcrumbs\Breadcrumbs;
 use ILIAS\UI\Component\Button\Bulky as BulkyButton;
 use ILIAS\UI\Component\Image\Image;
+use ILIAS\UI\Component\Layout\Page\Page;
 use ILIAS\UI\Component\MainControls\Footer;
 use ILIAS\UI\Component\MainControls\MainBar;
 use ILIAS\UI\Component\MainControls\MetaBar;
 use ILIAS\UI\Component\MainControls\Slate\Combined as CombinedSlate;
 
-class ScreenModificationProvider extends AbstractModificationPluginProvider
+class SEBModificationProvider extends AbstractModificationPluginProvider
 {
+    private const SCRIPT = <<<SCRIPT
+<script>
+    if (typeof SafeExamBrowser !== 'undefined'
+        && typeof SafeExamBrowser.security !== 'undefined'
+        && SafeExamBrowser.security.browserExamKey !== '') {
+        document.cookie = "examKey=" + SafeExamBrowser.security.browserExamKey;
+        document.cookie = "configKey=" + SafeExamBrowser.security.configKey;
+        document.cookie = "sebClientVersion=" + SafeExamBrowser.version;
+    }
+</script>
+SCRIPT;
+
     private ?bool $in_running_test = null;
 
     public function isInterestedInContexts(): ContextCollection
@@ -52,9 +68,24 @@ class ScreenModificationProvider extends AbstractModificationPluginProvider
         return $this->context_collection->main();
     }
 
+    public function getPageBuilderDecorator(
+        CalledContexts $screen_context_stack
+    ): ?PageBuilderModification {
+        return $this->factory->page()->withModification(
+            function (PagePartProvider $parts): Page {
+                $p = new StandardPageBuilder();
+                $page = $p->build($parts);
+                return $page->withTitle(self::SCRIPT . $parts->getTitle());
+            }
+        )->withHighPriority();
+    }
+
     public function getMainBarModification(
         CalledContexts $screen_context_stack
     ): ?MainBarModification {
+        if (!$this->plugin->getEnableSEBSkin()) {
+            return null;
+        }
         return $this->dic->globalScreen()->layout()->factory()->mainbar()->withModification(
             function (MainBar $current = null): ?MainBar {
                 $this->addCSS();
@@ -71,6 +102,9 @@ class ScreenModificationProvider extends AbstractModificationPluginProvider
     public function getMetaBarModification(
         CalledContexts $screen_context_stack
     ): ?MetaBarModification {
+        if (!$this->plugin->getEnableSEBSkin()) {
+            return null;
+        }
         return $this->dic->globalScreen()->layout()->factory()->metabar()->withModification(
             function (MetaBar $current = null): ?MetaBar {
                 $empty_metabar = $current->withClearedEntries();
@@ -85,6 +119,9 @@ class ScreenModificationProvider extends AbstractModificationPluginProvider
     public function getLogoModification(
         CalledContexts $screen_context_stack
     ): ?LogoModification {
+        if (!$this->plugin->getEnableSEBSkin()) {
+            return null;
+        }
         return $this->dic->globalScreen()->layout()->factory()->logo()->withModification(
             function (Image $current = null): ?Image {
                 $logo_path = './Customizing/global/plugins/Services/UIComponent/UserInterfaceHook/SEB/templates/images/HeaderIcon.png';
@@ -103,12 +140,18 @@ class ScreenModificationProvider extends AbstractModificationPluginProvider
     public function getResponsiveLogoModification(
         CalledContexts $screen_context_stack
     ): ?LogoModification {
+        if (!$this->plugin->getEnableSEBSkin()) {
+            return null;
+        }
         return $this->getLogoModification($screen_context_stack);
     }
 
     public function getTitleModification(
         CalledContexts $screen_context_stack
     ): ?TitleModification {
+        if (!$this->plugin->getEnableSEBSkin()) {
+            return null;
+        }
         return $this->dic->globalScreen()->layout()->factory()->title()->withModification(
             fn (string $current = null): string => $this->initializeHeaderBuilder()
                 ->getParsedTitleString()
@@ -118,6 +161,9 @@ class ScreenModificationProvider extends AbstractModificationPluginProvider
     public function getBreadCrumbsModification(
         CalledContexts $screen_context_stack
     ): ?BreadCrumbsModification {
+        if (!$this->plugin->getEnableSEBSkin()) {
+            return null;
+        }
         return $this->dic->globalScreen()->layout()->factory()->breadcrumbs()->withModification(
             static fn (Breadcrumbs $current = null): ?Breadcrumbs => null
         )->withHighPriority();
@@ -126,6 +172,9 @@ class ScreenModificationProvider extends AbstractModificationPluginProvider
     public function getFooterModification(
         CalledContexts $screen_context_stack
     ): ?FooterModification {
+        if (!$this->plugin->getEnableSEBSkin()) {
+            return null;
+        }
         return $this->dic->globalScreen()->layout()->factory()->footer()->withModification(
             static fn (Footer $current = null): ?Footer => null
         )->withHighPriority();

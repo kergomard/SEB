@@ -52,7 +52,7 @@ class HeaderBuilder
 
     public function getParsedTitleString(): string
     {
-        $template = new \ilTemplate('tpl.il_as_tst_kiosk_head.html', true, true, $this->plugin->getDirectory());
+        $template = new \ilTemplate('tpl.seb_kiosk_head.html', true, true, $this->plugin->getDirectory());
 
         $template->setVariable('HEADER_BG_COLOR', $this->plugin->getHeaderBackgroundColor());
         $template->setVariable('HEADER_COLOR', $this->plugin->getHeaderColor());
@@ -91,7 +91,7 @@ class HeaderBuilder
 
         if ($this->object->getType() === 'tst'
             && $this->object->isShowExamIdInTestPassEnabled()) {
-            $testSession = new ilTestSession();
+            $testSession = new \ilTestSession();
             $testSession->loadTestSession(
                 $this->object->getTestId(),
                 $this->user->getId()

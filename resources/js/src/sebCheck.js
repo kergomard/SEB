@@ -21,47 +21,47 @@
  */
 
 /**
- * @type url
+ * @param {DOMDocument} documentParam
+ * @returns {void}
  */
-let checkSebKeyGuiURL;
-
-/**
- * @type {DOMDocument}
- */
-let document;
-
-function afterUpdateKey() {
-  document.cookie = `examKey=${SafeExamBrowser.security.browserExamKey}`;
-  document.cookie = `configKey=${SafeExamBrowser.security.configKey}`;
-  document.cookie = `sebClientVersion=${SafeExamBrowser.version}`;
-  sendRequest();
+function tearDownSEBKey(documentParam) {
+  const document = documentParam;
+  if (typeof SafeExamBrowser !== 'undefined'
+    && typeof SafeExamBrowser.security !== 'undefined'
+    && SafeExamBrowser.security.browserExamKey !== '') {
+    document.cookie = 'examKey=;expires=-1';
+    document.cookie = 'configKey=;expires=-1';
+    document.cookie = 'sebClientVersion=;expires=-1';
+  }
 }
 
-function sendRequest() {
-  fetch(checkSebKeyGuiURL, { credentials: 'same-origin' })
+/**
+ * @param {String} url
+ * @param {DOMDocument} document
+ * @returns {void}
+ */
+function sendRequest(url, document) {
+  fetch(url, { credentials: 'same-origin' })
     .then((response) => {
       if (response.status === 403) {
-        document.open('text/html');
-        document.write(response.text());
-        document.close();
+        response.text().then((data) => {
+          document.open('text/html');
+          document.write(data);
+          document.close();
+        });
+        return;
       }
 
-      return response.text();
+      return;
     });
 }
 
 /**
- * @param {HTMLElement} clockElement
- * @param {Function} setInterval
+ * @param {String} url
+ * @param {DOMDocument} document
  * @returns {void}
  */
-export default function saveAndCheckSEBKey(url, documentParam) {
-  checkSebKeyGuiURL = url;
-  document = documentParam;
-
-  document.cookie = `uri=${document.defaultView.location.href}`;
-  if (typeof SafeExamBrowser !== 'undefined'
-    && SafeExamBrowser.security !== undefined) {
-    SafeExamBrowser.security.updateKeys(() => afterUpdateKey(document));
-  }
+export default function setupCheckSEBKey(url, document) {
+  document.defaultView.addEventListener('beforeunload', () => tearDownSEBKey(document));
+  sendRequest(url, document);
 }
