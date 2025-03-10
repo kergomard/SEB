@@ -28,21 +28,20 @@ use ILIAS\HTTP\Wrapper\ArrayBasedRequestWrapper;
 
 class ilSEBSessionsTableGUI extends ilTable2GUI
 {
-    private ilSEBPlugin $plugin;
-    private ilLanguage $lang;
     private bool $hide_checkbox = false;
 
     public function __construct(
         ilSEBSessionsTabGUI $object_gui,
         string $cmd,
-        ilSEBPlugin $plugin,
-        ilLanguage $lang,
+        private readonly ilSEBPlugin $plugin,
+        private readonly ilLanguage $lang
     ) {
         parent::__construct($object_gui, $cmd);
-        $this->plugin = $plugin;
-        $this->lang = $lang;
 
-        $this->setRowTemplate('tpl.seb_sessions_table_row.html', 'Customizing/global/plugins/Services/UIComponent/UserInterfaceHook/SEB/');
+        $this->setRowTemplate(
+            'tpl.seb_sessions_table_row.html',
+            'Customizing/global/plugins/Services/UIComponent/UserInterfaceHook/SEB/'
+        );
         $this->setFormAction($this->ctrl->getFormAction($object_gui, $cmd));
         $this->setEnableHeader(true);
         $this->setExternalSorting(false);
@@ -71,10 +70,7 @@ class ilSEBSessionsTableGUI extends ilTable2GUI
                 ilTable2GUI::FILTER_TEXT,
                 false, $this->lang->txt('user')
             ),
-            filter_var(
-                $user_filter_string,
-                FILTER_SANITIZE_STRING
-            )
+            htmlspecialchars($user_filter_string)
         );
     }
 

@@ -35,25 +35,10 @@ use ILIAS\Refinery\Factory as Refinery;
 
 class ilSEBPlugin extends ilUserInterfaceHookPlugin
 {
-    public const SEB_REQUEST_TYPES = [
-        'seb_request_invalid' => -1,
-        'not_a_seb_request' => 0,
-        'seb_request_object_keys_unspecific' => 1,
-        'seb_request' => 2,
-        'seb_request_object_keys' => 3
-    ];
-
     public const REQ_HEADER = 'X-Safeexambrowser-Requesthash';
     public const STANDARD_BASE_CLASS = 'ilUIPluginRouterGUI';
     public const SEB_CHECK_KEY_GUI_DEFINITION = [self::STANDARD_BASE_CLASS, ilSEBCheckKeyGUI::class];
     public const CHECK_KEY_COMMAND = 'checkKey';
-
-    public const SEB_DATA_MODE = [
-        'none' => 0,
-        'header' => 1,
-        'cookie' => 2,
-        'user_agent' => 3
-    ];
 
     private static $forbidden = false;
     private static $kioskmode_checked = false;
@@ -235,8 +220,11 @@ class ilSEBPlugin extends ilUserInterfaceHookPlugin
     {
         $test = new ilObjTest($this->current_ref_id);
         if ($test->getKioskMode() === true) {
-            $test->setKioskMode();
-            $test->saveToDb();
+            $test->getMainSettingsRepository()->store(
+                $test->getMainSettings()->withTestBehaviourSettings(
+                    $test->getMainSettings()->getTestBehaviourSettings()->withKioskMode(0)
+                )
+            );
         }
 
         self::$kioskmode_checked = true;

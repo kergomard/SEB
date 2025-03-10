@@ -39,14 +39,7 @@ class AccessChecker
         'checkKey',
         'getOSDNotifications'
     ];
-    private KeysChecker $keys_checker;
-    private \ilCtrl $ctrl;
-    private \ilObjUser $user;
-    private \ilAuthSession $auth;
-    private \ilRbacReview $rbacreview;
-    private Refinery $refinery;
-    private HTTPServices $http;
-    private Configuration $config;
+
     private ?Data $data = null;
     private ?int $ref_id = null;
 
@@ -66,24 +59,15 @@ class AccessChecker
 
     public function __construct(
         ?int $ref_id,
-        KeysChecker $keys_checker,
-        \ilCtrl $ctrl,
-        \ilObjUser $user,
-        \ilAuthSession $auth,
-        \ilRbacReview $rbacreview,
-        Refinery $refinery,
-        HTTPServices $http,
-        Configuration $conf
+        private readonly KeysChecker $keys_checker,
+        private readonly \ilCtrl $ctrl,
+        private readonly \ilObjUser $user,
+        private readonly \ilAuthSession $auth,
+        private readonly \ilRbacReview $rbacreview,
+        private readonly Refinery $refinery,
+        private readonly HTTPServices $http,
+        private readonly Configuration $config
     ) {
-        $this->keys_checker = $keys_checker;
-        $this->ctrl = $ctrl;
-        $this->user = $user;
-        $this->auth = $auth;
-        $this->rbacreview = $rbacreview;
-        $this->refinery = $refinery;
-        $this->http = $http;
-        $this->config = $conf;
-
         if (!$this->user->getId()
             || $this->user->getId() === ANONYMOUS_USER_ID
             || $this->rbacreview->isAssigned($this->user->getId(), SYSTEM_ROLE_ID)) {
@@ -163,32 +147,32 @@ class AccessChecker
         return '';
     }
 
-    private function sebKeyInHeaderPostCookieOrNone(): int
+    private function sebKeyInHeaderPostCookieOrNone(): DataModes
     {
         if ($this->http->request()->hasHeader(\ilSEBPlugin::REQ_HEADER)) {
-            return \ilSEBPlugin::SEB_DATA_MODE['header'];
+            return DataModes::HEADER;
         }
         if ($this->http->wrapper()->cookie()->has('examKey')) {
-            return \ilSEBPlugin::SEB_DATA_MODE['cookie'];
+            return DataModes::COOKIE;
         }
         if ($this->config->isInsecureUserAgentKeyEnabled()
             && $this->http->request()->hasHeader('User-Agent')
             && preg_match('/SEBKEY=(.*)/', $this->http->request()->getHeader('User-Agent')[0])) {
-            return \ilSEBPlugin::SEB_DATA_MODE['user_agent'];
+            return DataModes::USER_AGENT;
         }
-        return \ilSEBPlugin::SEB_DATA_MODE['none'];
+        return DataModes::NONE;
     }
 
     private function isInsecureUnhashedMode(): bool
     {
-        return $this->data->getMode() === \ilSEBPlugin::SEB_DATA_MODE['user_agent'];
+        return $this->data->getMode() === DataModes::USER_AGENT;
     }
 
     private function detectCurrentUserAllowed(): bool {
         $role_deny = $this->config->getRoleDeny();
         if ($role_deny === 0
             || $role_deny !== 1 && !$this->rbacreview->isAssigned($this->user->getId(), $role_deny)
-            || $this->detectSeb($this->ref_id) >= \ilSEBPlugin::SEB_REQUEST_TYPES['seb_request']
+            || $this->detectSeb($this->ref_id)->allowsDirectKeyMatch()
             || $this->anySEBKeyIsEnough() && $this->detectSeb()) {
             return true;
         }
@@ -221,7 +205,7 @@ class AccessChecker
     private function detectKeyCheckPossibleOrForced(): bool
     {
         $check_forced = \ilSession::get('check_forced') ?? 0;
-        if ($this->data->getMode() === \ilSEBPlugin::SEB_DATA_MODE['cookie']
+        if ($this->data->getMode() === DataModes::COOKIE
             && ($this->data->getExamKey() === '' || $check_forced === 0)) {
             \ilSession::set('check_forced', ++$check_forced);
             return false;
@@ -230,16 +214,16 @@ class AccessChecker
         return true;
     }
 
-    private function detectSeb(?int $ref_id = null): int
+    private function detectSeb(?int $ref_id = null): SEBRequestTypes
     {
         \ilSession::clear('url_to_check');
         $exam_key = $this->data->getExamKey();
         if ($exam_key === '') {
             \ilSession::set('cookie_ui', $this->retrieveFullUri());
-            return \ilSebPlugin::SEB_REQUEST_TYPES['not_a_seb_request'];
+            return SEBRequestTypes::NOT_A_SEB_REQUEST;
         }
 
-        $uri = $this->data->getMode() === \ilSEBPlugin::SEB_DATA_MODE['cookie']
+        $uri = $this->data->getMode() === DataModes::COOKIE
                 ? $this->data->getCookieUri()
                 : $this->data->getRequestUri();
 
@@ -248,7 +232,7 @@ class AccessChecker
                 $uri,
                 $this->isInsecureUnhashedMode()
             )) {
-            return \ilSebPlugin::SEB_REQUEST_TYPES['seb_request'];
+            return SEBRequestTypes::GLOBAL_KEY;
         }
         if ($this->keys_checker->checkObjectKey(
                 $exam_key,
@@ -256,19 +240,19 @@ class AccessChecker
                 $ref_id,
                 $this->isInsecureUnhashedMode()
             )) {
-            return \ilSebPlugin::SEB_REQUEST_TYPES['seb_request_object_keys'];
+            return SEBRequestTypes::OBEJCT_KEY;
         }
         if (!$ref_id && $this->keys_checker->checkKeyAgainstAllObjectKeys(
                 $exam_key,
                 $uri,
                 $this->isInsecureUnhashedMode()
             )) {
-            return \ilSebPlugin::SEB_REQUEST_TYPES['seb_request_object_keys_unspecific'];
+            return SEBRequestTypes::OBJECT_KEY_UNSPECIFIC;
         }
-        return \ilSebPlugin::SEB_REQUEST_TYPES['seb_request_invalid'];
+        return SEBRequestTypes::INVALID;
     }
 
-    private function retrieveSEBData(int $mode, string $cookie_key): Data
+    private function retrieveSEBData(DataModes $mode, string $cookie_key): Data
     {
         $data = new Data(
             $mode,
@@ -277,13 +261,13 @@ class AccessChecker
         );
 
         switch ($mode) {
-            case \ilSEBPlugin::SEB_DATA_MODE['header']:
+            case DataModes::HEADER:
                 return $data->withExamKey(
                     $this->http->request()->getHeader(\ilSEBPlugin::REQ_HEADER)[0]
                 );
-            case \ilSEBPlugin::SEB_DATA_MODE['cookie']:
+            case DataModes::COOKIE:
                 return $data->withExamKey($cookie_key);
-            case \ilSEBPlugin::SEB_DATA_MODE['user_agent']:
+            case DataModes::USER_AGENT:
                 preg_match(
                     '/SEBKEY=([a-zA-Z0-9_]+)/',
                     $this->http->request()->getHeader('User-Agent')[0],
@@ -321,7 +305,8 @@ class AccessChecker
     private function updateControlURIInSession(): void
     {
         if (!in_array($this->ctrl->getCmd(''), self::CMDS_WITHOUT_URI_UPDATE)
-            && stristr($this->http->request()->getUri()->getPath(), 'goto.php') === false) {
+            && stristr($this->http->request()->getUri()->getPath(), 'goto.php') === false
+            && stristr($this->http->request()->getUri()->getPath(), '/go/') === false) {
             \ilSession::set('cookie_uri', $this->retrieveFullUri());
         }
     }

@@ -27,22 +27,16 @@ declare(strict_types=1);
 namespace kergomard\SEB\Access;
 
 class Data {
-    private int $mode;
-    private string $request_uri;
-    private ?string $cookie_uri;
     private string $exam_key = '';
 
     public function __construct(
-        int $mode,
-        string $request_uri,
-        ?string $cookie_uri,
+        private readonly DataModes $mode,
+        private readonly string $request_uri,
+        private readonly ?string $cookie_uri,
     ) {
-        $this->mode = $mode;
-        $this->request_uri = $request_uri;
-        $this->cookie_uri = $cookie_uri;
     }
 
-    public function getMode(): int
+    public function getMode(): DataModes
     {
         return $this->mode;
     }

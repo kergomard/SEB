@@ -26,9 +26,11 @@ declare(strict_types=1);
 
 namespace kergomard\SEB\Presentation;
 
+use ILIAS\GlobalScreen\Identification\PluginIdentificationProvider;
 use ILIAS\GlobalScreen\Scope\Layout\Builder\StandardPageBuilder;
 use ILIAS\GlobalScreen\Scope\Layout\Factory\BreadCrumbsModification;
 use ILIAS\GlobalScreen\Scope\Layout\Factory\FooterModification;
+use ILIAS\GlobalScreen\Scope\Layout\Factory\LayoutModification;
 use ILIAS\GlobalScreen\Scope\Layout\Factory\LogoModification;
 use ILIAS\GlobalScreen\Scope\Layout\Factory\MainBarModification;
 use ILIAS\GlobalScreen\Scope\Layout\Factory\MetaBarModification;
@@ -49,6 +51,7 @@ use ILIAS\UI\Component\MainControls\Slate\Combined as CombinedSlate;
 
 class SEBModificationProvider extends AbstractModificationPluginProvider
 {
+    protected PluginIdentificationProvider $if;
     private const SCRIPT = <<<SCRIPT
 <script>
     if (typeof SafeExamBrowser !== 'undefined'
@@ -96,7 +99,7 @@ SCRIPT;
                 }
                 return $this->dic->ui()->factory()->mainControls()->mainBar();
             }
-        )->withHighPriority();
+        )->withPriority(LayoutModification::PRIORITY_HIGH - 1);
     }
 
     public function getMetaBarModification(
@@ -113,7 +116,7 @@ SCRIPT;
                 }
                 return $empty_metabar;
             }
-        )->withHighPriority();
+        )->withPriority(LayoutModification::PRIORITY_HIGH - 1);
     }
 
     public function getLogoModification(
@@ -212,7 +215,10 @@ SCRIPT;
             return false;
         }
 
-        $test_session = new \ilTestSession();
+        $test_session = new \ilTestSession(
+            $this->dic->database(),
+            $this->dic->user()
+        );
         $test_session->loadTestSession(
             (new \ilObjTest($this->plugin->getCurrentRefId()))->getTestId(),
             $this->dic->user()->getId()

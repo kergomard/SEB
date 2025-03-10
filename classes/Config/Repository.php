@@ -32,15 +32,11 @@ class Repository
 {
     private const CONFIG_TABLE_NAME = 'ui_uihk_seb_conf';
     private const OBJECT_KEYS_TABLE_NAME = 'ui_uihk_seb_keys';
-    private \ilDBInterface $db;
-    private HTTPServices $http;
 
     public function __construct(
-        \ilDBInterface $db,
-        HTTPServices $http
+        private readonly \ilDBInterface $db,
+        private readonly HTTPServices $http
     ) {
-        $this->db = $db;
-        $this->http = $http;
     }
 
     public function getGlobalConfiguration(): Configuration

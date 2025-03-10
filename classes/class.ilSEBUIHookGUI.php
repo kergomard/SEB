@@ -24,8 +24,6 @@
 
 declare(strict_types=1);
 
-use kergomard\SEB\Config\Configuration;
-
 class ilSEBUIHookGUI extends ilUIHookPluginGUI
 {
     private ilSecuritySettings $security;

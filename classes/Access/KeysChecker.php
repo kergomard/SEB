@@ -32,15 +32,10 @@ use kergomard\SEB\Config\Repository;
 
 class KeysChecker
 {
-    private Configuration $configuration;
-    private Repository $repository;
-
     public function __construct(
-        Configuration $configuration,
-        Repository $repository
+        private readonly Configuration $configuration,
+        private readonly Repository $repository
     ) {
-        $this->configuration = $configuration;
-        $this->repository = $repository;
     }
 
     public function checkGlobalKey(

@@ -28,19 +28,13 @@ namespace kergomard\SEB\Presentation;
 
 class HeaderBuilder
 {
-    private \ilSEBPlugin $plugin;
-    private \ilObjUser $user;
     private ?\ilObject $object = null;
-    private string $short_inst_name;
 
     public function __construct(
-        \ilSEBPlugin $plugin,
-        \ilObjUser $user,
-        string $short_inst_name
+        private readonly \ilSEBPlugin $plugin,
+        private readonly \ilObjUser $user,
+        private readonly string $short_inst_name
     ) {
-        $this->plugin = $plugin;
-        $this->user = $user;
-        $this->short_inst_name = $short_inst_name;
     }
 
     public function withObject(\ilObject $object): self

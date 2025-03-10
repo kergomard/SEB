@@ -32,18 +32,11 @@ use ILIAS\UI\Factory as UIFactory;
 
 class ObjectSpecificKeys
 {
-    private int $ref_id;
-    private array $keys_windows;
-    private array $keys_macos;
-
     public function __construct(
-        int $ref_id,
-        array $keys_windows,
-        array $keys_macos
+        private readonly int $ref_id,
+        private readonly array $keys_windows,
+        private readonly array $keys_macos
     ) {
-        $this->ref_id = $ref_id;
-        $this->keys_windows = $keys_windows;
-        $this->keys_macos = $keys_macos;
     }
 
     public function getMergedKeysArray(): array

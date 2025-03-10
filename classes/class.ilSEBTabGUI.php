@@ -24,8 +24,6 @@
 
 declare(strict_types=1);
 
-use kergomard\SEB\Config\Configuration;
-
 use ILIAS\Refinery\Factory as Refinery;
 use ILIAS\HTTP\Services as HTTPServices;
 use ILIAS\UI\Factory as UIFactory;
@@ -51,7 +49,6 @@ abstract class ilSEBTabGUI
     protected int $ref_id;
     protected ilObject $object;
     protected ilSEBPlugin $pl;
-    protected Configuration $configuration;
 
     public function __construct()
     {

@@ -1,3 +1,6 @@
+.il-logo {
+	overflow: initial;
+}
 .il-logo  a:first-child {
 	align-self: flex-start;
 }
@@ -5,7 +8,6 @@
 	max-height: 130px;
 	width: auto;
 	position: relative;
-	top: 35px;
 }
 
 div.il_HeaderInner.media {
@@ -17,7 +19,7 @@ div.il_HeaderInner.media {
 }
 
 @media only screen and (max-width: 768px) {
-	.il-logo img {
+	.il-logo .img-standard {
 		height: initial;
 		min-height: 45px;
 		min-width: 45px;

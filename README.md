@@ -31,10 +31,10 @@ This plugin is a completely refactored fork of the SEB plugin developed by
 Stefan Schneider at the University of Marburg.
 
 **Minimum ILIAS Version:**
-8.0
+9.0
 
 **Maximum ILIAS Version:**
-8.99
+9.99
 
 **Responsible Developer:**
 Stephan Kergomard - office@kergomard.ch

@@ -97,42 +97,25 @@ class Configuration
     private const DEFAULT_HEADER_BG_COLOR = '#6EA03C';
     private const DEFAULT_HEADER_COLOR = '#FFF';
 
-    private array $global_keys;
-    private int $role_deny;
-    private int $role_kiosk;
-    private bool $object_keys_enabled;
-    private bool $session_control_enabled;
-    private bool $show_pax_pic;
-    private bool $show_pax_matriculation;
-    private bool $show_pax_username;
-    private string $ilias_root_uri;
-    private string $header_background_color;
-    private string $header_color;
-
     public function __construct(
-        array $global_keys,
-        int $role_deny,
-        int $role_kiosk,
-        bool $object_keys_enabled,
-        bool $session_control_enabled,
-        bool $show_pax_pic,
-        bool $show_pax_matriculation,
-        bool $show_pax_username,
-        string $ilias_root_uri,
-        ?string $header_background_color,
-        ?string $header_color
+        private readonly array $global_keys,
+        private readonly int $role_deny,
+        private readonly int $role_kiosk,
+        private readonly bool $object_keys_enabled,
+        private readonly bool $session_control_enabled,
+        private readonly bool $show_pax_pic,
+        private readonly bool $show_pax_matriculation,
+        private readonly bool $show_pax_username,
+        private readonly string $ilias_root_uri,
+        private ?string $header_background_color,
+        private ?string $header_color
     ) {
-        $this->global_keys = $global_keys;
-        $this->role_deny = $role_deny;
-        $this->role_kiosk = $role_kiosk;
-        $this->object_keys_enabled = $object_keys_enabled;
-        $this->session_control_enabled = $session_control_enabled;
-        $this->show_pax_pic = $show_pax_pic;
-        $this->show_pax_matriculation = $show_pax_matriculation;
-        $this->show_pax_username = $show_pax_username;
-        $this->ilias_root_uri = $ilias_root_uri;
-        $this->header_background_color = $header_background_color ?? self::DEFAULT_HEADER_BG_COLOR;
-        $this->header_color = $header_color ?? self::DEFAULT_HEADER_COLOR;
+        if ($this->header_background_color === null) {
+            $this->header_background_color = $header_background_color ?? self::DEFAULT_HEADER_BG_COLOR;
+        }
+        if ($this->header_color === null) {
+            $this->header_color = $header_color ?? self::DEFAULT_HEADER_COLOR;
+        }
     }
 
     public function getCmdsWithoutSebKeyTab(): array

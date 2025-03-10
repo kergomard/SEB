@@ -1,6 +1,6 @@
 /* Hide unused sections, where removal through the hooks creates too much overhead */
 /* hide StartupSection */
-p.ilStartupSection, .ilContentFixed button, .breadcrumbs, .nav.il-maincontrols,
+p.ilStartupSection, .ilHeadAction, .breadcrumbs, .nav.il-maincontrols,
 .osdNotificationContainer, .ilInfoScreenSec .il_InfoScreenPropertyValue a[href="#"] {
 	display: none;
 }
@@ -37,6 +37,10 @@ p.ilStartupSection, .ilContentFixed button, .breadcrumbs, .nav.il-maincontrols,
 	text-overflow: ellipsis;
 }
 
+#kioskParticipant {
+	text-align: right;
+}
+
 #kioskClock {
 	padding: 0 2em;
 }
@@ -50,6 +54,10 @@ p.ilStartupSection, .ilContentFixed button, .breadcrumbs, .nav.il-maincontrols,
   -ms-grid-rows: 1fr 40px;
   grid-template-rows: 1fr 40px;
   grid-template-rows: 1fr calc(40px + 1.2 * env(safe-area-inset-bottom));
+}
+
+.il-logo {
+	align-items: initial;
 }
 
 .il-logo,
