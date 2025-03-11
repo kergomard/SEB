@@ -59,7 +59,11 @@ class Configuration
         'ilassquestionpreviewgui',
         'ilassquestionrelatednavigationbargui',
         'iltestevaluationgui',
-        'iltestskillevaluationgui'
+        'iltestskillevaluationgui',
+        'iltestpagegui',
+        'ilassquestionpagegui',
+        'iltestplayerrandomquestionsetgui',
+        'iltestplayerfixedquestionsetgui'
     ];
 
      private const REQUESTS_THAT_DONT_NEED_OBJECT_SPECIFIC_KEYS = [
