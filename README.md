@@ -31,10 +31,10 @@ This plugin is a completely refactored fork of the SEB plugin developed by
 Stefan Schneider at the University of Marburg.
 
 **Minimum ILIAS Version:**
-9.0
+10.0
 
 **Maximum ILIAS Version:**
-9.99
+10.99
 
 **Responsible Developer:**
 Stephan Kergomard - office@kergomard.ch
@@ -49,8 +49,8 @@ German, English
 **have been applied!**
 
 ### Quick Installation Guide
-1. Copy the content of this folder in <ILIAS_directory>/Customizing/global/plugins/Services/UIComponent/UserInterfaceHook/SEB
-or clon this Github-Repo to <ILIAS_directory>/Customizing/global/plugins/Services/UIComponent/UserInterfaceHook/
+1. Copy the content of this folder in <ILIAS_directory>public/Customizing/plugins/UIComponent/UserInterfaceHook/SEB
+or clon this Github-Repo to <ILIAS_directory>/public/Customizing/plugins/UIComponent/UserInterfaceHook/
 2. Access ILIAS, go to the administration menu and select "Plugins".
 3. Look for the SEB-Plugin in the table, press the "Actions" button and select "Update".
 4. Press the "Actions" button and select "Configure" to choose your settings. Be

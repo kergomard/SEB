@@ -26,7 +26,7 @@
 
 $id = 'seb';
 $version = '2.7.0';
-$ilias_min_version = '9.0';
-$ilias_max_version = '9.99';
+$ilias_min_version = '10.0';
+$ilias_max_version = '10.99';
 $responsible = 'Stephan Kergomard';
 $responsible_mail = 'office@kergomard.ch';

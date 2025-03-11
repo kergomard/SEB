@@ -127,7 +127,7 @@ SCRIPT;
         }
         return $this->dic->globalScreen()->layout()->factory()->logo()->withModification(
             function (Image $current = null): ?Image {
-                $logo_path = './Customizing/global/plugins/Services/UIComponent/UserInterfaceHook/SEB/templates/images/HeaderIcon.png';
+                $logo_path = './Customizing/plugins/UIComponent/UserInterfaceHook/SEB/templates/images/HeaderIcon.png';
                 $logo_alt = 'SEB Logo';
                 if ($this->plugin->isShowParticipantPicture()) {
                     $logo_path = $this->dic->user()->getPersonalPicturePath('small', true);
@@ -346,14 +346,14 @@ SCRIPT;
 
     private function addCSS(): void
     {
-        $this->dic->ui()->mainTemplate()->addCss($this->plugin->getStyleSheetLocation('default/seb.css'));
+        $this->dic->ui()->mainTemplate()->addCss('Customizing/plugins/UIComponent/UserInterfaceHook/SEB/templates/default/seb.css');
 
         if ($this->plugin->isShowParticipantPicture()) {
-            $this->dic->ui()->mainTemplate()->addCss($this->plugin->getStyleSheetLocation('default/seb_with_profile_picture.css'));
+            $this->dic->ui()->mainTemplate()->addCss('Customizing/plugins/UIComponent/UserInterfaceHook/SEB/templates/default/seb_with_profile_picture.css');
         }
 
         if ($this->isTestRunning()) {
-            $this->dic->ui()->mainTemplate()->addCss($this->plugin->getStyleSheetLocation('default/seb_test_running.css'));
+            $this->dic->ui()->mainTemplate()->addCss('Customizing/plugins/UIComponent/UserInterfaceHook/SEB/templates/default/seb_test_running.css');
         }
     }
 }

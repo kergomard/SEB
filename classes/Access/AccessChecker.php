@@ -109,7 +109,15 @@ class AccessChecker
         session_unset();
         session_destroy();
 
-        $tpl = $pl->getTemplate('default/tpl.seb_forbidden.html');
+        $tpl = new \ilTemplate(
+            'public/Customizing/plugins/UIComponent/UserInterfaceHook/SEB/templates/default/tpl.seb_forbidden.html',
+            true,
+            true,
+            '',
+            \ilGlobalTemplateInterface::DEFAULT_BLOCK,
+            true,
+            true
+        );
         $tpl->setCurrentBlock('seb_forbidden_message');
         $tpl->setVariable('SEB_FORBIDDEN_HEADER', $pl->txt('forbidden_header'));
         $tpl->setVariable('SEB_FORBIDDEN_MESSAGE', $pl->txt('forbidden_message'));

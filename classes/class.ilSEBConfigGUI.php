@@ -35,19 +35,19 @@ use ILIAS\UI\Component\Input\Container\Form\Standard as StandardForm;
 /**
  * @ilCtrl_isCalledBy ilSEBConfigGUI: ilObjComponentSettingsGUI
  */
-class ilSEBConfigGUI extends ilPluginConfigGUI
+class ilSEBConfigGUI extends \ilPluginConfigGUI
 {
     private const CMD_CONFIGURE = 'configure';
     private const CMD_SAVE = 'save';
 
-    private ilSEBPlugin $pl;
-    private ilGlobalTemplateInterface $tpl;
+    private \ilSEBPlugin $pl;
+    private \ilGlobalTemplateInterface $tpl;
     private UIFactory $ui_factory;
     private UIRenderer $ui_renderer;
     private Refinery $refinery;
-    private ilLanguage $lng;
-    private ilCtrl $ctrl;
-    private ilRbacReview $rbac_review;
+    private \ilLanguage $lng;
+    private \ilCtrl $ctrl;
+    private \ilRbacReview $rbac_review;
     private HTTPServices $http;
 
     public function performCommand(string $cmd): void
@@ -101,8 +101,8 @@ class ilSEBConfigGUI extends ilPluginConfigGUI
         return $this->ui_factory->input()->container()->form()->standard(
                 $this->ctrl->getFormActionByClass(
                 [
-                    ilAdministrationGUI::class,
-                    ilObjComponentSettingsGUI::class,
+                    \ilAdministrationGUI::class,
+                    \ilObjComponentSettingsGUI::class,
                     self::class
                 ],
                 self::CMD_SAVE

@@ -46,7 +46,16 @@ class HeaderBuilder
 
     public function getParsedTitleString(): string
     {
-        $template = new \ilTemplate('tpl.seb_kiosk_head.html', true, true, $this->plugin->getDirectory());
+        $template = new \ilTemplate(
+            'public/Customizing/plugins/UIComponent/UserInterfaceHook/SEB/templates/default/tpl.seb_kiosk_head.html'
+            ,
+            true,
+            true,
+            '',
+            \ilGlobalTemplateInterface::DEFAULT_BLOCK,
+            true,
+            true
+        );
 
         $template->setVariable('HEADER_BG_COLOR', $this->plugin->getHeaderBackgroundColor());
         $template->setVariable('HEADER_COLOR', $this->plugin->getHeaderColor());

@@ -57,7 +57,9 @@ class Configuration
         'ilsebsettingstabgui',
         'ilobjectactivationgui',
         'ilassquestionpreviewgui',
-        'ilassquestionrelatednavigationbargui'
+        'ilassquestionrelatednavigationbargui',
+        'iltestevaluationgui',
+        'iltestskillevaluationgui'
     ];
 
      private const REQUESTS_THAT_DONT_NEED_OBJECT_SPECIFIC_KEYS = [
