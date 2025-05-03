@@ -50,7 +50,11 @@ class Configuration
         'outparticipantspassdetails',
         'editquestion',
         'showsolution',
-        'showanswerstatistic'
+        'showfeedbackform',
+        'showanswerstatistic',
+        'suggestedsolution',
+        'outsolutionexplorer',
+        'linkchilds'
     ];
     private const CMD_CLASSES_WITHOUT_SEB_KEY_TAB = [
         'ilsebsessionstabgui',
@@ -63,7 +67,12 @@ class Configuration
         'iltestpagegui',
         'ilassquestionpagegui',
         'iltestplayerrandomquestionsetgui',
-        'iltestplayerfixedquestionsetgui'
+        'iltestplayerfixedquestionsetgui',
+        'ilassquestionfeedbackeditinggui',
+        'ilassquestionhintstablegui',
+        'ilassquestionhintgui',
+        'ilconfirmationgui',
+        'iltestsubmissionreviewgui'
     ];
 
      private const REQUESTS_THAT_DONT_NEED_OBJECT_SPECIFIC_KEYS = [
