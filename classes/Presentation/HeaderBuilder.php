@@ -47,11 +47,11 @@ class HeaderBuilder
     public function getParsedTitleString(): string
     {
         $template = new \ilTemplate(
-            'public/Customizing/plugins/UIComponent/UserInterfaceHook/SEB/templates/default/tpl.seb_kiosk_head.html'
+            'tpl.seb_kiosk_head.html'
             ,
             true,
             true,
-            '',
+            'public/Customizing/global/plugins/Services/UIComponent/UserInterfaceHook/SEB',
             \ilGlobalTemplateInterface::DEFAULT_BLOCK,
             true,
             true

@@ -110,10 +110,10 @@ class AccessChecker
         session_destroy();
 
         $tpl = new \ilTemplate(
-            'public/Customizing/plugins/UIComponent/UserInterfaceHook/SEB/templates/default/tpl.seb_forbidden.html',
+            'tpl.seb_forbidden.html',
             true,
             true,
-            '',
+            'public/Customizing/global/plugins/Services/UIComponent/UserInterfaceHook/SEB',
             \ilGlobalTemplateInterface::DEFAULT_BLOCK,
             true,
             true

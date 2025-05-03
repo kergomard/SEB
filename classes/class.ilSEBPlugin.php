@@ -127,7 +127,7 @@ class ilSEBPlugin extends ilUserInterfaceHookPlugin
             $this->disableKioskMode();
         }
 
-        $layout_meta->addJs('Customizing/plugins/UIComponent/UserInterfaceHook/SEB/resources/js/dist/seb.js', true);
+        $layout_meta->addJs('Customizing/global/plugins/Services/UIComponent/UserInterfaceHook/SEB/resources/js/dist/seb.js', true);
         $ctrl->setParameterByClass(ilUIPluginRouterGUI::class, 'ref_id', $this->current_ref_id);
 
         $this->provider_collection->setModificationProvider(
