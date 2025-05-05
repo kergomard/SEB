@@ -51,13 +51,14 @@ German, English
 ### Quick Installation Guide
 1. Copy the content of this folder in <ILIAS_directory>/Customizing/global/plugins/Services/UIComponent/UserInterfaceHook/SEB
 or clon this Github-Repo to <ILIAS_directory>/Customizing/global/plugins/Services/UIComponent/UserInterfaceHook/
-2. Access ILIAS, go to the administration menu and select "Plugins".
-3. Look for the SEB-Plugin in the table, press the "Actions" button and select "Update".
-4. Press the "Actions" button and select "Configure" to choose your settings. Be
+2. Run `composer install --no-dev`  and `php setup/setup.php update` in the root folder of your installation.
+3. Access ILIAS, go to the administration menu and select "Plugins".
+4. Look for the SEB-Plugin in the table, press the "Actions" button and select "Update".
+5. Press the "Actions" button and select "Configure" to choose your settings. Be
 aware that you might be locking out users from your installation, so check the
 bylines of the different options for the correct settings.
-5. Press the "Actions" button and select "Activate" to activate the plugin.
-6. If you want to use object specific keys and have activated the corresponding
+6. Press the "Actions" button and select "Activate" to activate the plugin.
+7. If you want to use object specific keys and have activated the corresponding
 option, users with write rights on a test can set the keys directly in the
 corresponding tab in the test object. This key is only valid for this test, so a
 direct static link to the test object (to be found in the info tab) MUST be set
