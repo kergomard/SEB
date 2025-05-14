@@ -188,6 +188,7 @@ SCRIPT;
         $title_object = new HeaderBuilder(
             $this->plugin,
             $this->dic->user(),
+            $this->dic->database(),
             $this->dic->settings()->get('short_inst_name', '')
         );
         if ($this->plugin->getCurrentRefId() === null

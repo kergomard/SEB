@@ -33,6 +33,7 @@ class HeaderBuilder
     public function __construct(
         private readonly \ilSEBPlugin $plugin,
         private readonly \ilObjUser $user,
+        private readonly \ilDBInterface $db,
         private readonly string $short_inst_name
     ) {
     }
@@ -85,17 +86,23 @@ class HeaderBuilder
 
         if ($this->object->getType() === 'tst'
             && $this->object->isShowExamIdInTestPassEnabled()) {
-            $testSession = new \ilTestSession();
-            $testSession->loadTestSession(
+            $test_session = new \ilTestSession(
+                $this->db,
+                $this->user
+            );
+            $test_session->loadTestSession(
                 $this->object->getTestId(),
                 $this->user->getId()
             );
-            $exam_id = \ilObjTest::buildExamId(
-                $testSession->getActiveId(),
-                $testSession->getPass(),
-                $this->plugin->getCurrentRefId()
-            );
-            $template->setVariable('EXAM_ID', "({$this->plugin->txt('exam_id')}: {$exam_id})");
+
+            if ($test_session->getLastStartedPass() > $test_session->getLastFinishedPass()) {
+                $exam_id = \ilObjTest::buildExamId(
+                    $test_session->getActiveId(),
+                    $test_session->getPass(),
+                    $this->plugin->getCurrentRefId()
+                );
+                $template->setVariable('EXAM_ID', "({$this->plugin->txt('exam_id')}: {$exam_id})");
+            }
         }
 
         return $template->get();
