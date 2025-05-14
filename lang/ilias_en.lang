@@ -17,6 +17,7 @@ browser_seb#:#SEB
 config#:#Configuration
 delete_session_of_users#:#Delete Sessions of Selected Participants
 description_settings_form#:#Keys entered here are only valid for this object!
+exam_id#:#Exam-ID
 forbidden_header#:#Access denied!
 forbidden_login#:#Login to ILIAS
 forbidden_message#:#You are not authorized to access the system with this browser.<br />Please contact your system administrator.
