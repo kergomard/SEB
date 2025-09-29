@@ -96,17 +96,20 @@ abstract class ilSEBTabGUI
 
     protected function setupUI(): void
     {
+        $class_name = 'ilObj' . $this->obj_def->getClassName($this->object->getType()) . 'GUI';
         $this->locator->addRepositoryItems($this->ref_id);
+        $this->ctrl->setParameterByClass($class_name, 'ref_id', $this->ref_id);
         $this->locator->addItem(
             $this->object->getTitle(),
             $this->ctrl->getLinkTargetByClass(
                 [
-                        'ilRepositoryGUI',
-                        'ilObj' . $this->obj_def->getClassName($this->object->getType()) . 'GUI'
+                    ilRepositoryGUI::class,
+                    $class_name
                 ],
                 ''
             )
         );
+        $this->ctrl->clearParameterByClass($class_name, 'ref_id');
         $this->tpl->setLocator();
         $this->tpl->setTitle($this->object->getTitle());
         $this->tpl->setDescription($this->object->getDescription());
