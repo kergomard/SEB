@@ -66,9 +66,9 @@ class ilSEBPlugin extends ilUserInterfaceHookPlugin
         /** @var ILIAS\DI\Container $DIC */
         global $DIC;
         $ctrl = $DIC['ilCtrl'];
-
         $user = $DIC['ilUser'];
         $auth = $DIC['ilAuthSession'];
+        $access = $DIC['ilAccess'];
         $rbacreview = $DIC['rbacreview'];
         $refinery = $DIC['refinery'];
         $http = $DIC['http'];
@@ -90,12 +90,20 @@ class ilSEBPlugin extends ilUserInterfaceHookPlugin
         $this->configuration_repository = new Repository($database, $http);
         $this->configuration = $this->configuration_repository->getGlobalConfiguration();
 
+        $in_tst_context = $this->current_ref_id === null
+            ? false
+            : ilObject::_lookupType($this->current_ref_id, true) === 'tst';
+
         $access_checker = new AccessChecker(
             $this->current_ref_id,
+            $in_tst_context
+                ? $this->configuration_repository->getObjectSpecificKeysFor($this->current_ref_id)
+                : null,
             new KeysChecker($this->configuration, $this->configuration_repository),
             $ctrl,
             $user,
             $auth,
+            $access,
             $rbacreview,
             $refinery,
             $http,
@@ -111,18 +119,13 @@ class ilSEBPlugin extends ilUserInterfaceHookPlugin
             $access_checker->exitIlias($this);
         }
 
-        $obj_type = null;
-        if ($this->current_ref_id  !== null) {
-            $obj_type = ilObject::_lookupType($this->current_ref_id, true);
-        }
-
         /*
          * We need to switch the kioskmode off in tests to avoid collitions in certain modification providers
          * for the GlobalScreen. We need to check this here, because there simply is no other place.
          */
         if (!self::$kioskmode_checked
             && $access_checker->isSwitchToSebSkinNeeded()
-            && $obj_type === 'tst'
+            && $in_tst_context
         ) {
             $this->disableKioskMode();
         }
@@ -137,7 +140,7 @@ class ilSEBPlugin extends ilUserInterfaceHookPlugin
         if ($access_checker->isSwitchToSebSkinNeeded()
             && (self::$kioskmode_checked
                 || $this->current_ref_id === null
-                || $obj_type !== 'tst')) {
+                || !$in_tst_context)) {
             $this->enable_seb_skin = true;
         }
 
