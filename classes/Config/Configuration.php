@@ -72,7 +72,10 @@ class Configuration
         'ilassquestionhintstablegui',
         'ilassquestionhintgui',
         'ilconfirmationgui',
-        'iltestsubmissionreviewgui'
+        'iltestsubmissionreviewgui',
+        'ilparticipantstestresultsgui',
+        'ilobjrolegui',
+        'ilpcmediaobjectgui'
     ];
 
      private const REQUESTS_THAT_DONT_NEED_OBJECT_SPECIFIC_KEYS = [
