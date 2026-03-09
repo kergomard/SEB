@@ -44,13 +44,14 @@ class Configuration
     public const MAX_CONFIG_VALUE_LENGTH = 2000;
     private const CMDS_WITHOUT_SEB_KEY_TAB = [
         'showquestion',
-        'outuserresultsoverview',
         'outuserpassdetails',
         'outparticipantsresultsoverview',
         'outparticipantspassdetails',
         'editquestion',
         'showsolution',
+        'showuseranswers',
         'showfeedbackform',
+        'showresults',
         'showanswerstatistic',
         'suggestedsolution',
         'outsolutionexplorer',
@@ -62,7 +63,6 @@ class Configuration
         'ilobjectactivationgui',
         'ilassquestionpreviewgui',
         'ilassquestionrelatednavigationbargui',
-        'iltestevaluationgui',
         'iltestskillevaluationgui',
         'iltestpagegui',
         'ilassquestionpagegui',
@@ -73,9 +73,13 @@ class Configuration
         'ilassquestionhintgui',
         'ilconfirmationgui',
         'iltestsubmissionreviewgui',
-        'ilparticipantstestresultsgui',
         'ilobjrolegui',
-        'ilpcmediaobjectgui'
+        'ilpcmediaobjectgui',
+        'ilpcgridgui',
+        'ilpcfilelistgui',
+        'ilpclistgui',
+        'ilpcinteractiveimagegui',
+        'ilconditionhandlergui'
     ];
 
      private const REQUESTS_THAT_DONT_NEED_OBJECT_SPECIFIC_KEYS = [
