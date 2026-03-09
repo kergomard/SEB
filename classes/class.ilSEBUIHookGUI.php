@@ -79,7 +79,7 @@ class ilSEBUIHookGUI extends ilUIHookPluginGUI
             ) && !in_array(
                 $this->cmd_class,
                 $this->plugin_object->getConfiguration()->getCmdClassesWithoutSebKeyTab()
-            )) {
+        )) {
 
             /*
              * Add Sessioncontrol Tab for SEB
