@@ -54,7 +54,9 @@ class Configuration
         'showanswerstatistic',
         'suggestedsolution',
         'outsolutionexplorer',
-        'linkchilds'
+        'linkchilds',
+        'multiparticipantspassdetails',
+        'showpassoverview'
     ];
     private const CMD_CLASSES_WITHOUT_SEB_KEY_TAB = [
         'ilsebsessionstabgui',
@@ -62,7 +64,6 @@ class Configuration
         'ilobjectactivationgui',
         'ilassquestionpreviewgui',
         'ilassquestionrelatednavigationbargui',
-        'iltestpagegui',
         'ilassquestionpagegui',
         'iltestplayerrandomquestionsetgui',
         'iltestplayerfixedquestionsetgui',
@@ -77,10 +78,19 @@ class Configuration
         'ilpcfilelistgui',
         'ilpclistgui',
         'ilpcinteractiveimagegui',
-        'ilconditionhandlergui'
+        'ilconditionhandlergui',
+        'ileditclipboardgui',
+        'iltestquestionbrowsertablegui',
+        'ilpctablegui',
+        'ilmdeditorgui',
+        'ilobjmediaobjectgui'
     ];
 
-     private const REQUESTS_THAT_DONT_NEED_OBJECT_SPECIFIC_KEYS = [
+    private const CMD_CLASS_CMD_COMBINATIONS_WITHOUT_SEB_KEY_TAB = [
+        'iltestpagegui' => 'history'
+    ];
+
+    private const REQUESTS_THAT_DONT_NEED_OBJECT_SPECIFIC_KEYS = [
         'context_check' => [
             \ilContext::CONTEXT_WAC
         ],
@@ -138,14 +148,22 @@ class Configuration
         }
     }
 
-    public function getCmdsWithoutSebKeyTab(): array
-    {
-        return self::CMDS_WITHOUT_SEB_KEY_TAB;
-    }
-
-    public function getCmdClassesWithoutSebKeyTab(): array
-    {
-        return self::CMD_CLASSES_WITHOUT_SEB_KEY_TAB;
+    public function needsSEBTab(
+        string $cmd_class,
+        string $cmd
+    ): bool {
+        return !in_array(
+            $cmd_class,
+            self::CMD_CLASSES_WITHOUT_SEB_KEY_TAB
+        ) && !in_array(
+            $cmd,
+            self::CMDS_WITHOUT_SEB_KEY_TAB
+        ) && !(
+            array_key_exists(
+                $cmd_class,
+                self::CMD_CLASS_CMD_COMBINATIONS_WITHOUT_SEB_KEY_TAB
+            ) && self::CMD_CLASS_CMD_COMBINATIONS_WITHOUT_SEB_KEY_TAB[$cmd_class] === $cmd
+        );
     }
 
     public function doesContextAllowAnyObjectKey(string $context): bool

@@ -73,13 +73,11 @@ class ilSEBUIHookGUI extends ilUIHookPluginGUI
 
         if ($this->obj_type === 'tst'
             && $this->has_write_access
-            && !in_array(
-                $this->cmd,
-                $this->plugin_object->getConfiguration()->getCmdsWithoutSebKeyTab()
-            ) && !in_array(
+            && $this->plugin_object->getConfiguration()->needsSEBTab(
                 $this->cmd_class,
-                $this->plugin_object->getConfiguration()->getCmdClassesWithoutSebKeyTab()
-        )) {
+                $this->cmd
+            )
+        ) {
 
             /*
              * Add Sessioncontrol Tab for SEB
