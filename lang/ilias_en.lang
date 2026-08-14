@@ -20,8 +20,8 @@ description_settings_form#:#Keys entered here are only valid for this object!
 exam_id#:#Exam-ID
 forbidden_header#:#Access denied!
 forbidden_login#:#Login to ILIAS
-forbidden_message#:#You are not authorized to access the system with this browser.<br />Please contact your system administrator.
-forbidden_specific_message#:#You are not authorized to access this test with this browser.<br />Please contact your system administrator.
+forbidden_message#:#You are not authorized to access the system with this browser.<br />Please contact your invigilator or system administrator.
+forbidden_specific_message#:#You are not authorized to access this test with this browser.<br />Please contact your invigilator system administrator.
 force_seb_usage#:#Force Access Through SEB
 force_seb_usage_info#:#Access to this test for accounts lacking the right to change the settings of this test is only possible using a Save Exam Browser configured with the object-specific keys set above. The kiosk skin will be used.
 header_bg_color#:#Header Background Color
