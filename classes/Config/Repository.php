@@ -102,7 +102,7 @@ class Repository
         $force_seb_usage = false;
         if (($keys_config = $this->db->fetchAssoc(
             $this->db->query(
-                'SELECT force_seb_usage, seb_key_win, seb_key_macos FROM ui_uihk_seb_keys where ref_id='
+                'SELECT force_seb_usage, seb_key_win, seb_key_macos FROM ' . self::OBJECT_KEYS_TABLE_NAME . ' where ref_id='
                     . $this->db->quote($ref_id, 'integer')
             )
         ))) {
@@ -122,11 +122,12 @@ class Repository
     {
         return array_reduce(
             $this->db->fetchAll(
-                $this->db->query('SELECT * FROM ' . self::OBJECT_KEYS_TABLE_NAME)
+                $this->db->query('SELECT force_seb_usage, seb_key_win, seb_key_macos FROM ' . self::OBJECT_KEYS_TABLE_NAME)
             ),
             function (array $c, array $vs): array {
                 $c[] = new ObjectSpecificKeys(
                     (int) $vs['ref_id'],
+                    $vs['force_seb_usage'] === 1,
                     $this->buildSEBKeysFromConfigString($vs['seb_key_win']),
                     $this->buildSEBKeysFromConfigString($vs['seb_key_macos'])
                 );
