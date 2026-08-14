@@ -116,7 +116,7 @@ class ilSEBPlugin extends ilUserInterfaceHookPlugin
              * This is the one and only place this MUST be set.
              */
             self::$forbidden = true;
-            $access_checker->exitIlias($this);
+            $access_checker->onAccessDenied($this);
         }
 
         /*
