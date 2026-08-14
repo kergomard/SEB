@@ -21,6 +21,7 @@ exam_id#:#Prüfungsnr.
 forbidden_header#:#Keine Berechtigung!
 forbidden_login#:#Bei ILIAS anmelden
 forbidden_message#:#Sie haben mit diesem Browser keine Berechtigung auf das System zuzugreifen. <br />Bitte kontaktieren Sie den Systemadministrator.
+forbidden_specific_message#:#Sie haben mit diesem Browser keine Berechtigung auf diesen Test zuzugreifen. <br />Bitte kontaktieren Sie den Systemadministrator.
 force_seb_usage#:#SEB-Nutzung erzwingen
 force_seb_usage_info#:#Der Zugriff auf den Test für Konten ohne die Berechtigung Einstellungen zu bearbeiten ist nur mit einem Safe Exam Browser und unter Verwendung eines Objekt-spezifischen Keys (siehe oben) möglich. Die Nutzung des Kiosk-Skins wird erzwungen.
 header_bg_color#:#Hintergrundfarbe der Kopfzeile

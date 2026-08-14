@@ -32,6 +32,7 @@ use kergomard\SEB\Config\ObjectSpecificKeys;
 use ILIAS\Filesystem\Stream\Streams;
 use ILIAS\HTTP\Services as HTTPServices;
 use ILIAS\Refinery\Factory as Refinery;
+use ILIAS\UI\Component\MessageBox\MessageBox;
 
 class AccessChecker
 {
@@ -103,7 +104,21 @@ class AccessChecker
         return $this->key_check_possible_or_unavoidable;
     }
 
-    public function exitIlias(\ilSEBPlugin $pl): void
+    public function onAccessDenied(
+        \ilSEBPlugin $pl
+    ): void {
+        if ($this->object_specific_keys_forced) {
+            \ilSession::set(
+                MessageBox::FAILURE,
+                "{$pl->txt('forbidden_header')} {$pl->txt('forbidden_specific_message')}"
+            );
+            $this->ctrl->redirectToURL(\ilUserUtil::getStartingPointAsUrl());
+        }
+
+        $this->exitILIAS($pl);
+    }
+
+    private function exitILIAS(\ilSEBPlugin $pl): void
     {
         \ilSession::setClosingContext(\ilSession::SESSION_CLOSE_LOGIN);
         if ($this->auth->isValid()) {
