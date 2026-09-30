@@ -245,7 +245,7 @@ class AccessChecker
         \ilSession::clear('url_to_check');
         $exam_key = $this->data->getExamKey();
         if ($exam_key === '') {
-            \ilSession::set('cookie_ui', $this->retrieveFullUri());
+            \ilSession::set('cookie_uri', $this->retrieveFullUri());
             return SEBRequestTypes::NOT_A_SEB_REQUEST;
         }
 
