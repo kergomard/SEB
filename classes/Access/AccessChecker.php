@@ -36,6 +36,7 @@ use ILIAS\UI\Component\MessageBox\MessageBox;
 
 class AccessChecker
 {
+    private const SESSION_ID_COOKIE_URI = 'cookie_uri';
     private const CMDS_WITHOUT_URI_UPDATE = [
         'autosave',
         'checkKey',
@@ -253,7 +254,7 @@ class AccessChecker
         \ilSession::clear('url_to_check');
         $exam_key = $this->data->getExamKey();
         if ($exam_key === '') {
-            \ilSession::set('cookie_ui', $this->retrieveFullUri());
+            \ilSession::set(self::SESSION_ID_COOKIE_URI, $this->retrieveFullUri());
             return SEBRequestTypes::NOT_A_SEB_REQUEST;
         }
 
@@ -291,7 +292,7 @@ class AccessChecker
         $data = new Data(
             $mode,
             $this->retrieveFullUri(),
-            \ilSession::get('cookie_uri')
+            \ilSession::get(self::SESSION_ID_COOKIE_URI)
         );
 
         switch ($mode) {
@@ -341,7 +342,7 @@ class AccessChecker
         if (!in_array($this->ctrl->getCmd(''), self::CMDS_WITHOUT_URI_UPDATE)
             && stristr($this->http->request()->getUri()->getPath(), 'goto.php') === false
             && stristr($this->http->request()->getUri()->getPath(), '/go/') === false) {
-            \ilSession::set('cookie_uri', $this->retrieveFullUri());
+            \ilSession::set(self::SESSION_ID_COOKIE_URI, $this->retrieveFullUri());
         }
     }
 }
